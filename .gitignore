@@ -483,3 +483,4 @@ $RECYCLE.BIN/
 
 # Claude Code subagent worktrees
 .claude/worktrees/
+.claude/settings.local.json

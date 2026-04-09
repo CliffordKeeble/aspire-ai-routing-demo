@@ -128,6 +128,9 @@ purpose.
 | 4 | 2026-04-09 | One xUnit project, integration-first | `Aspire.Hosting.Testing` boots the whole AppHost in-process; one good test beats many shallow ones. |
 | 5 | 2026-04-09 | `Guid Id`, dot-namespaced topics | Idiomatic for Service Bus; reads well in the dashboard. |
 | 6 | 2026-04-09 | Contracts as a separate class library | Single source of truth for message shapes and topic names. |
+| 7 | 2026-04-09 | Aspire resource names vs Service Bus topic names | Aspire resource names must be valid identifiers (no dots); Service Bus topic names can contain dots. The `AddServiceBusTopic(resourceName, topicName)` overload separates the two. Contracts constants stay dot-namespaced as the on-the-wire names; a local `Slug()` helper in `AppHost.cs` derives the resource name by replacing dots with hyphens. |
+| 8 | 2026-04-09 | Service Bus emulator EULA handled automatically | `Aspire.Hosting.Azure.ServiceBus` 9.5.0's `RunAsEmulator()` handles the emulator licence acceptance internally. No explicit `ACCEPT_EULA` environment variable or fluent call needed. Verified by the dashboard coming up green on first F5. |
+| 9 | 2026-04-09 | Aspire client libraries version independently | `Aspire.Azure.Messaging.ServiceBus` (client integration) is on 13.x while `Aspire.Hosting.*` packages are on 9.x. Both belong to the Aspire 9.x release train; the version numbers have different lineages. Packages are compatible by contract, not by version match. No pinning required. |
 
 ## Open items
 
