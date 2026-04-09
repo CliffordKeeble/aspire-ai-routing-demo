@@ -30,6 +30,7 @@
     <ProjectReference Include="..\AspireDemo.AppHost\AspireDemo.AppHost.csproj" />
     <ProjectReference Include="..\AspireDemo.Classifier\AspireDemo.Classifier.csproj" />
     <ProjectReference Include="..\AspireDemo.Contracts\AspireDemo.Contracts.csproj" />
+    <ProjectReference Include="..\AspireDemo.Web\AspireDemo.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

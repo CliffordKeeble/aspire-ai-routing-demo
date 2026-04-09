@@ -13,7 +13,7 @@ public class EndToEndSliceTests(ITestOutputHelper output)
     private static readonly TimeSpan EndToEndTimeout = TimeSpan.FromSeconds(60);
 
     [Fact]
-    public async Task Message_flows_Web_to_Classifier_to_Handler()
+    public async Task Message_flows_Web_to_Classifier_to_Handler_to_Relay()
     {
         var ct = TestContext.Current.CancellationToken;
 
@@ -40,6 +40,9 @@ public class EndToEndSliceTests(ITestOutputHelper output)
         await app.ResourceNotifications
             .WaitForResourceHealthyAsync("handler", ct)
             .WaitAsync(StartupTimeout, ct);
+        await app.ResourceNotifications
+            .WaitForResourceHealthyAsync("webfrontend", ct)
+            .WaitAsync(StartupTimeout, ct);
 
         var connectionString = await app.GetConnectionStringAsync("messaging", ct)
             ?? throw new InvalidOperationException("messaging connection string was null");
@@ -47,7 +50,9 @@ public class EndToEndSliceTests(ITestOutputHelper output)
         await using var sender = serviceBus.CreateSender(Topics.Incoming);
 
         var support = new SupportMessage(Guid.NewGuid(), "my invoice is wrong", DateTimeOffset.UtcNow);
-        var expectedFragment = $"Handler processed: {support.Id} - Billing";
+        // Looking for the Web relay log line proves all four hops fired:
+        // Web publish -> Classifier consume+publish -> Handler consume+publish -> Web relay consume.
+        var expectedFragment = $"Relay received handled message: {support.Id} - Billing";
 
         await sender.SendMessageAsync(new ServiceBusMessage(BinaryData.FromObjectAsJson(support)), ct);
 
@@ -69,7 +74,7 @@ public class EndToEndSliceTests(ITestOutputHelper output)
         if (!found)
         {
             Assert.Fail(
-                $"Did not observe Handler processing log within {EndToEndTimeout.TotalSeconds:F0}s.\n" +
+                $"Did not observe relay log within {EndToEndTimeout.TotalSeconds:F0}s.\n" +
                 $"Looking for: \"{expectedFragment}\"\n" +
                 $"--- captured tail ---\n" +
                 string.Join('\n', capture.Tail(60)));
