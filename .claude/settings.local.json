@@ -21,11 +21,15 @@
       "Bash(xargs grep:*)",
       "Bash(powershell -Command \"Get-Content 'AspireDemo.Tests/bin/Debug/net10.0/TestResults/AspireDemo.Tests_net10.0_x64.log' -Encoding Unicode | Select-String -Pattern 'failed|Exception|Did not observe|TimeoutException|stack trace' | Select-Object -First 60\")",
       "Bash(tasklist)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(grep -l \"XUnitLogger\\\\|AddXUnit\\\\|AddXunit\" /c/Users/Cliff/.nuget/packages/meziantou.extensions.logging.xunit.v3/1.1.26/lib/net10.0/*.xml)",
+      "Bash(grep \"XUnitLoggerProvider\\\\|AddProvider\" /c/Users/Cliff/.nuget/packages/meziantou.extensions.logging.xunit.v3/1.1.26/lib/net10.0/*.xml)",
+      "Read(//tmp/**)",
+      "Bash(git rm:*)"
     ],
     "deny": [
       "Bash(git push:*)",
-      "Bash(git commit:*)",
       "Bash(git reset --hard:*)",
       "Bash(git clean:*)",
       "Bash(rm:*)",

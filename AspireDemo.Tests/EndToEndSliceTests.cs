@@ -1,10 +1,13 @@
+using System.Collections.Concurrent;
 using AspireDemo.Contracts;
-using Aspire.Hosting.ApplicationModel;
 using Azure.Messaging.ServiceBus;
+using Meziantou.Extensions.Logging.Xunit.v3;
+using Microsoft.Extensions.Logging;
+using Xunit;
 
 namespace AspireDemo.Tests;
 
-public class EndToEndSliceTests
+public class EndToEndSliceTests(ITestOutputHelper output)
 {
     private static readonly TimeSpan StartupTimeout = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan EndToEndTimeout = TimeSpan.FromSeconds(60);
@@ -14,7 +17,16 @@ public class EndToEndSliceTests
     {
         var ct = TestContext.Current.CancellationToken;
 
+        var capture = new CapturingLoggerProvider();
+
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.AspireDemo_AppHost>(ct);
+        appHost.Services.AddLogging(b =>
+        {
+            b.SetMinimumLevel(LogLevel.Information);
+            b.AddFilter("AspireDemo.", LogLevel.Information);
+            b.AddProvider(new XUnitLoggerProvider(output));
+            b.AddProvider(capture);
+        });
 
         await using var app = await appHost.BuildAsync(ct).WaitAsync(StartupTimeout, ct);
         await app.StartAsync(ct).WaitAsync(StartupTimeout, ct);
@@ -37,81 +49,59 @@ public class EndToEndSliceTests
         var support = new SupportMessage(Guid.NewGuid(), "my invoice is wrong", DateTimeOffset.UtcNow);
         var expectedFragment = $"Handler processed: {support.Id} - Billing";
 
-        var loggerService = app.Services.GetRequiredService<ResourceLoggerService>();
+        await sender.SendMessageAsync(new ServiceBusMessage(BinaryData.FromObjectAsJson(support)), ct);
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
         deadline.CancelAfter(EndToEndTimeout);
 
-        // Start watching the handler's log stream BEFORE publishing so we can't miss the line.
-        var watchTask = WatchForFragmentAsync(loggerService, "handler", expectedFragment, deadline.Token);
-
-        await sender.SendMessageAsync(new ServiceBusMessage(BinaryData.FromObjectAsJson(support)), ct);
-
         var found = false;
-        try
+        while (!deadline.IsCancellationRequested)
         {
-            found = await watchTask;
-        }
-        catch (OperationCanceledException) when (deadline.IsCancellationRequested && !ct.IsCancellationRequested)
-        {
-            // Treated as not-found below.
+            if (capture.ContainsLineMatching(expectedFragment))
+            {
+                found = true;
+                break;
+            }
+            try { await Task.Delay(250, deadline.Token); }
+            catch (OperationCanceledException) { break; }
         }
 
         if (!found)
         {
-            var classifierLog = await DumpLogsAsync(loggerService, "classifier", ct);
-            var handlerLog = await DumpLogsAsync(loggerService, "handler", ct);
             Assert.Fail(
                 $"Did not observe Handler processing log within {EndToEndTimeout.TotalSeconds:F0}s.\n" +
                 $"Looking for: \"{expectedFragment}\"\n" +
-                $"--- classifier ---\n{classifierLog}\n" +
-                $"--- handler ---\n{handlerLog}");
+                $"--- captured tail ---\n" +
+                string.Join('\n', capture.Tail(60)));
         }
     }
 
-    private static async Task<string> DumpLogsAsync(ResourceLoggerService svc, string name, CancellationToken ct)
+    private sealed class CapturingLoggerProvider : ILoggerProvider
     {
-        try
-        {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(TimeSpan.FromSeconds(2));
-            var lines = new List<string>();
-            await foreach (var batch in svc.GetAllAsync(name).WithCancellation(cts.Token))
-            {
-                foreach (var line in batch) lines.Add(line.Content);
-                if (lines.Count > 200) break;
-            }
-            return string.Join('\n', lines.TakeLast(80));
-        }
-        catch (Exception ex)
-        {
-            return $"(dump failed: {ex.GetType().Name}: {ex.Message})";
-        }
-    }
+        private readonly ConcurrentQueue<string> _lines = new();
 
-    private static async Task<bool> WatchForFragmentAsync(
-        ResourceLoggerService loggerService,
-        string resourceName,
-        string fragment,
-        CancellationToken ct)
-    {
-        try
+        public ILogger CreateLogger(string categoryName) => new CaptureLogger(categoryName, _lines);
+        public void Dispose() { }
+
+        public bool ContainsLineMatching(string fragment) =>
+            _lines.Any(l => l.Contains(fragment, StringComparison.Ordinal));
+
+        public IReadOnlyCollection<string> Tail(int n) => _lines.ToArray().TakeLast(n).ToArray();
+
+        private sealed class CaptureLogger(string category, ConcurrentQueue<string> lines) : ILogger
         {
-            await foreach (var batch in loggerService.WatchAsync(resourceName).WithCancellation(ct))
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
             {
-                foreach (var line in batch)
-                {
-                    if (line.Content.Contains(fragment, StringComparison.Ordinal))
-                    {
-                        return true;
-                    }
-                }
+                lines.Enqueue($"[{category}] {formatter(state, exception)}");
             }
         }
-        catch (OperationCanceledException)
-        {
-            // Stream cancelled — fall through to return false.
-        }
-        return false;
     }
 }
