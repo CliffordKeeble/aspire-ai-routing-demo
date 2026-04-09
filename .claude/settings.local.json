@@ -26,7 +26,9 @@
       "Bash(grep -l \"XUnitLogger\\\\|AddXUnit\\\\|AddXunit\" /c/Users/Cliff/.nuget/packages/meziantou.extensions.logging.xunit.v3/1.1.26/lib/net10.0/*.xml)",
       "Bash(grep \"XUnitLoggerProvider\\\\|AddProvider\" /c/Users/Cliff/.nuget/packages/meziantou.extensions.logging.xunit.v3/1.1.26/lib/net10.0/*.xml)",
       "Read(//tmp/**)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)"
     ],
     "deny": [
       "Bash(git push:*)",
