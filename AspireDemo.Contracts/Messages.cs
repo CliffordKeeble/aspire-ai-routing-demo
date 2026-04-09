@@ -2,9 +2,14 @@ namespace AspireDemo.Contracts;
 
 public record SupportMessage(Guid Id, string CustomerText, DateTimeOffset ReceivedAt);
 
-public record ClassifiedMessage(Guid Id, string CustomerText, string Category, double Confidence, DateTimeOffset ClassifiedAt);
+public record ClassifiedMessage(Guid Id, string CustomerText, string Category, DateTimeOffset ClassifiedAt);
 
 public record HandledMessage(Guid Id, string CustomerText, string Category, string Response, DateTimeOffset HandledAt);
+
+public interface IMessageClassifier
+{
+    Task<string> ClassifyAsync(string customerText, CancellationToken ct);
+}
 
 public static class Topics
 {
