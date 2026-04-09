@@ -16,6 +16,9 @@ messaging.AddServiceBusTopic(Slug(Topics.Incoming), Topics.Incoming)
 messaging.AddServiceBusTopic(Slug(Topics.Classified), Topics.Classified)
     .AddServiceBusSubscription(Subscriptions.HandlerSub);
 
+messaging.AddServiceBusTopic(Slug(Topics.Handled), Topics.Handled)
+    .AddServiceBusSubscription(Subscriptions.WebFrontend);
+
 builder.AddProject<Projects.AspireDemo_Classifier>("classifier")
     .WithReference(cache)
     .WithReference(messaging)

@@ -1,5 +1,6 @@
 using AspireDemo.Web;
 using AspireDemo.Web.Components;
+using AspireDemo.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.AddRedisOutputCache("cache");
 builder.AddAzureServiceBusClient("messaging");
+
+// Live department view: shared singleton state + background relay from Service Bus.
+builder.Services.AddSingleton<SupportMessageStore>();
+builder.Services.AddHostedService<HandledMessageRelay>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

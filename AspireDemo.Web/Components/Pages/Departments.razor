@@ -1,0 +1,171 @@
+@page "/departments"
+@rendermode InteractiveServer
+@implements IDisposable
+@using AspireDemo.Contracts
+@using AspireDemo.Web.Services
+@inject SupportMessageStore Store
+
+<PageTitle>Departments</PageTitle>
+
+<h1>Departments</h1>
+
+<p class="text-muted">
+    Live view. Messages sent on the
+    <a href="send-message">Send Message</a> page land here once the classifier
+    and handler have routed them.
+</p>
+
+<div class="dept-grid">
+    @foreach (var category in SupportMessageStore.Categories)
+    {
+        var items = _byCategory[category];
+        <div class="dept-card">
+            <div class="dept-card-header">
+                <h2>@category</h2>
+                <span class="dept-count">@items.Count</span>
+            </div>
+            @if (items.Count == 0)
+            {
+                <p class="dept-empty">No messages yet.</p>
+            }
+            else
+            {
+                <ul class="dept-list">
+                    @foreach (var msg in items)
+                    {
+                        <li class="dept-item">
+                            <div class="dept-item-id">@Shorten(msg.Id)</div>
+                            <div class="dept-item-text" title="@msg.OriginalText">@Truncate(msg.OriginalText, 60)</div>
+                            <div class="dept-item-response" title="@msg.Response">@Truncate(msg.Response, 80)</div>
+                            <div class="dept-item-time">@msg.HandledAt.LocalDateTime.ToString("HH:mm:ss")</div>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .dept-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .dept-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem 1rem;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        display: flex;
+        flex-direction: column;
+        min-height: 12rem;
+    }
+
+    .dept-card-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        border-bottom: 1px solid #eef0f2;
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .dept-card h2 {
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    .dept-count {
+        font-variant-numeric: tabular-nums;
+        background: #eef0f2;
+        border-radius: 999px;
+        padding: 0 0.5rem;
+        font-size: 0.8rem;
+        color: #495057;
+    }
+
+    .dept-empty {
+        color: #868e96;
+        font-style: italic;
+        margin: 0;
+    }
+
+    .dept-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        overflow-y: auto;
+        max-height: 24rem;
+    }
+
+    .dept-item {
+        padding: 0.4rem 0;
+        border-bottom: 1px dashed #eef0f2;
+    }
+
+    .dept-item:last-child { border-bottom: none; }
+
+    .dept-item-id {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.75rem;
+        color: #868e96;
+    }
+
+    .dept-item-text {
+        font-weight: 500;
+    }
+
+    .dept-item-response {
+        font-size: 0.85rem;
+        color: #495057;
+    }
+
+    .dept-item-time {
+        font-size: 0.7rem;
+        color: #adb5bd;
+        font-variant-numeric: tabular-nums;
+    }
+</style>
+
+@code {
+    private readonly Dictionary<string, IReadOnlyList<HandledMessage>> _byCategory = new();
+
+    protected override void OnInitialized()
+    {
+        foreach (var category in SupportMessageStore.Categories)
+        {
+            _byCategory[category] = Store.GetForCategory(category);
+        }
+
+        Store.MessageAdded += OnMessageAdded;
+    }
+
+    private async void OnMessageAdded()
+    {
+        // Fired from the relay's Service Bus processor thread — must hop back
+        // to the Blazor dispatcher before touching component state or calling
+        // StateHasChanged.
+        foreach (var category in SupportMessageStore.Categories)
+        {
+            _byCategory[category] = Store.GetForCategory(category);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static string Shorten(Guid id) => id.ToString("N")[..8];
+
+    private static string Truncate(string s, int max) =>
+        string.IsNullOrEmpty(s) ? string.Empty
+        : s.Length <= max ? s
+        : s[..max] + "…";
+
+    public void Dispose()
+    {
+        Store.MessageAdded -= OnMessageAdded;
+    }
+}

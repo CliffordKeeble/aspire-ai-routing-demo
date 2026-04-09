@@ -8,7 +8,9 @@ public class Worker(ILogger<Worker> logger, ServiceBusClient client) : Backgroun
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var processor = client.CreateProcessor(Topics.Classified, Subscriptions.HandlerSub);
-        processor.ProcessMessageAsync += HandleMessageAsync;
+        await using var handledSender = client.CreateSender(Topics.Handled);
+
+        processor.ProcessMessageAsync += args => HandleMessageAsync(args, handledSender);
         processor.ProcessErrorAsync += HandleErrorAsync;
 
         await processor.StartProcessingAsync(stoppingToken);
@@ -25,7 +27,7 @@ public class Worker(ILogger<Worker> logger, ServiceBusClient client) : Backgroun
         }
     }
 
-    private async Task HandleMessageAsync(ProcessMessageEventArgs args)
+    private async Task HandleMessageAsync(ProcessMessageEventArgs args, ServiceBusSender handledSender)
     {
         var message = args.Message.Body.ToObjectFromJson<ClassifiedMessage>()
             ?? throw new InvalidOperationException("Failed to deserialise ClassifiedMessage — body was null.");
@@ -35,6 +37,17 @@ public class Worker(ILogger<Worker> logger, ServiceBusClient client) : Backgroun
         logger.LogInformation(
             "Handler processed: {Id} - {Category} - {Response}",
             message.Id, message.Category, response);
+
+        var handled = new HandledMessage(
+            message.Id,
+            message.Category,
+            message.CustomerText,
+            response,
+            DateTimeOffset.UtcNow);
+
+        await handledSender.SendMessageAsync(
+            new ServiceBusMessage(BinaryData.FromObjectAsJson(handled)),
+            args.CancellationToken);
 
         await args.CompleteMessageAsync(args.Message);
     }
