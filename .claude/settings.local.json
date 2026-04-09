@@ -1,18 +1,42 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet build:*)",
-      "Bash(grep -r \"TargetFramework\" C:/Dev/AspireDemo/*/*.csproj)",
-      "Bash(powershell -Command '$dll = [System.Reflection.Assembly]::LoadFrom\\([System.IO.Path]::Combine\\($env:USERPROFILE, '\\\\''.nuget/packages/aspire.hosting.azure.servicebus/9.5.0/lib/net8.0/Aspire.Hosting.Azure.ServiceBus.dll'\\\\''\\)\\); $dll.GetTypes\\(\\) | Where-Object { $_.Name -like '\\\\''*ServiceBus*'\\\\'' } | ForEach-Object { $_.GetMethods\\([System.Reflection.BindingFlags]'\\\\''Public,Static'\\\\''\\) | Where-Object { $_.Name -eq '\\\\''AddServiceBusTopic'\\\\'' } | ForEach-Object { $_.ToString\\(\\) } }')",
-      "Bash(powershell -Command ':*)",
-      "Bash(powershell -Command 'Add-Type -AssemblyName System.Reflection; $path = '\\\\''C:/Users/Cliff/.nuget/packages/aspire.hosting.azure.servicebus/9.5.0/lib/net8.0/Aspire.Hosting.Azure.ServiceBus.dll'\\\\''; $dll = [System.Reflection.Assembly]::LoadFile\\($path\\); $dll.GetTypes\\(\\) | ForEach-Object { $_.GetMethods\\(\\) | Where-Object { $_.Name -eq '\\\\''AddServiceBusTopic'\\\\'' } | ForEach-Object { $_.ToString\\(\\) } }')",
-      "Bash(cd /tmp)",
-      "Bash(cp \"C:/Users/Cliff/.nuget/packages/aspire.hosting.azure.servicebus/9.5.0/aspire.hosting.azure.servicebus.9.5.0.nupkg\" .)",
-      "Bash(unzip -l aspire.hosting.azure.servicebus.9.5.0.nupkg)",
-      "Bash(unzip -p aspire.hosting.azure.servicebus.9.5.0.nupkg lib/net8.0/Aspire.Hosting.Azure.ServiceBus.xml)",
-      "Bash(grep -v \"^.*obj.*$\")",
-      "Bash(dotnet add:*)",
-      "Bash(dotnet new:*)"
+      "Bash(dotnet:*)",
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git worktree list)",
+      "Bash(git worktree list:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git cat-file:*)",
+      "Bash(ls:*)",
+      "Bash(dir:*)",
+      "Bash(type:*)",
+      "Bash(cat:*)",
+      "Bash(Get-ChildItem:*)",
+      "Bash(Get-Content:*)",
+      "Bash(xargs grep:*)",
+      "Bash(powershell -Command \"Get-Content 'AspireDemo.Tests/bin/Debug/net10.0/TestResults/AspireDemo.Tests_net10.0_x64.log' -Encoding Unicode | Select-String -Pattern 'failed|Exception|Did not observe|TimeoutException|stack trace' | Select-Object -First 60\")",
+      "Bash(tasklist)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(grep -l \"XUnitLogger\\\\|AddXUnit\\\\|AddXunit\" /c/Users/Cliff/.nuget/packages/meziantou.extensions.logging.xunit.v3/1.1.26/lib/net10.0/*.xml)",
+      "Bash(grep \"XUnitLoggerProvider\\\\|AddProvider\" /c/Users/Cliff/.nuget/packages/meziantou.extensions.logging.xunit.v3/1.1.26/lib/net10.0/*.xml)",
+      "Read(//tmp/**)",
+      "Bash(git rm:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)"
+    ],
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(rm:*)",
+      "Bash(Remove-Item:*)",
+      "Bash(del:*)"
     ]
   }
 }

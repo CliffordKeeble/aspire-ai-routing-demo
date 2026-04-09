@@ -1,16 +1,55 @@
+using AspireDemo.Contracts;
+using Azure.Messaging.ServiceBus;
+
 namespace AspireDemo.Handler;
 
-public class Worker(ILogger<Worker> logger) : BackgroundService
+public class Worker(ILogger<Worker> logger, ServiceBusClient client) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        var processor = client.CreateProcessor(Topics.Classified, Subscriptions.HandlerSub);
+        processor.ProcessMessageAsync += HandleMessageAsync;
+        processor.ProcessErrorAsync += HandleErrorAsync;
+
+        await processor.StartProcessingAsync(stoppingToken);
+
+        try
         {
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-            }
-            await Task.Delay(1000, stoppingToken);
+            await Task.Delay(Timeout.Infinite, stoppingToken);
         }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            await processor.StopProcessingAsync();
+            await processor.DisposeAsync();
+        }
+    }
+
+    private async Task HandleMessageAsync(ProcessMessageEventArgs args)
+    {
+        var message = args.Message.Body.ToObjectFromJson<ClassifiedMessage>()
+            ?? throw new InvalidOperationException("Failed to deserialise ClassifiedMessage — body was null.");
+
+        var response = BuildResponse(message.Category);
+
+        logger.LogInformation(
+            "Handler processed: {Id} - {Category} - {Response}",
+            message.Id, message.Category, response);
+
+        await args.CompleteMessageAsync(args.Message);
+    }
+
+    private static string BuildResponse(string category) => category switch
+    {
+        "Billing" => "Thanks — we've routed your billing query to our finance team and will respond within 1 business day.",
+        "Account" => "We can help with account access. A reset link is on its way to your registered email.",
+        "Cancellation" => "We're sorry to see you go. A retention specialist will contact you shortly.",
+        _ => "Thanks for getting in touch. We'll route this to the right team and respond soon."
+    };
+
+    private Task HandleErrorAsync(ProcessErrorEventArgs args)
+    {
+        logger.LogWarning(args.Exception, "Handler processor error. Source={ErrorSource}", args.ErrorSource);
+        return Task.CompletedTask;
     }
 }

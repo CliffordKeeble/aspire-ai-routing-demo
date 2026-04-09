@@ -1,15 +1,19 @@
 using AspireDemo.Contracts;
 using Azure.Messaging.ServiceBus;
-using System.Text.Json;
 
 namespace AspireDemo.Classifier;
 
-public class Worker(ILogger<Worker> logger, ServiceBusClient client) : BackgroundService
+public class Worker(
+    ILogger<Worker> logger,
+    ServiceBusClient client,
+    IMessageClassifier classifier) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var processor = client.CreateProcessor(Topics.Incoming, Subscriptions.ClassifierSub);
-        processor.ProcessMessageAsync += HandleMessageAsync;
+        await using var sender = client.CreateSender(Topics.Classified);
+
+        processor.ProcessMessageAsync += args => HandleMessageAsync(args, sender);
         processor.ProcessErrorAsync += HandleErrorAsync;
 
         await processor.StartProcessingAsync(stoppingToken);
@@ -26,11 +30,24 @@ public class Worker(ILogger<Worker> logger, ServiceBusClient client) : Backgroun
         }
     }
 
-    private async Task HandleMessageAsync(ProcessMessageEventArgs args)
+    private async Task HandleMessageAsync(ProcessMessageEventArgs args, ServiceBusSender sender)
     {
         var message = args.Message.Body.ToObjectFromJson<SupportMessage>()
             ?? throw new InvalidOperationException("Failed to deserialise SupportMessage — body was null.");
-        logger.LogInformation("Classifier received: {Id} - {CustomerText}", message.Id, message.CustomerText);
+
+        var category = await classifier.ClassifyAsync(message.CustomerText, args.CancellationToken);
+
+        var classified = new ClassifiedMessage(
+            message.Id,
+            message.CustomerText,
+            category,
+            DateTimeOffset.UtcNow);
+
+        await sender.SendMessageAsync(
+            new ServiceBusMessage(BinaryData.FromObjectAsJson(classified)),
+            args.CancellationToken);
+
+        logger.LogInformation("Classifier classified: {Id} - {Category}", classified.Id, classified.Category);
         await args.CompleteMessageAsync(args.Message);
     }
 
