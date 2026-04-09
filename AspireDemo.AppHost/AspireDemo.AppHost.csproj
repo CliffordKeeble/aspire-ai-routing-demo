@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.0" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>1572c207-36c4-4f68-96ed-896bc41f451c</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AspireDemo.Classifier\AspireDemo.Classifier.csproj" />
+    <ProjectReference Include="..\AspireDemo.Contracts\AspireDemo.Contracts.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\AspireDemo.Handler\AspireDemo.Handler.csproj" />
+    <ProjectReference Include="..\AspireDemo.Web\AspireDemo.Web.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.5.0" />
+    <PackageReference Include="Aspire.Hosting.Azure.ServiceBus" Version="9.5.0" />
+    <PackageReference Include="Aspire.Hosting.Redis" Version="9.5.0" />
+  </ItemGroup>
+
+</Project>

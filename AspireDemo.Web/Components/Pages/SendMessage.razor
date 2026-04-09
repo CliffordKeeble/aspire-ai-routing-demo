@@ -1,0 +1,43 @@
+@page "/send-message"
+@rendermode InteractiveServer
+@using Azure.Messaging.ServiceBus
+@using AspireDemo.Contracts
+@inject ServiceBusClient ServiceBus
+
+<PageTitle>Send Message</PageTitle>
+
+<h1>Send Support Message</h1>
+
+<div class="mb-3">
+    <textarea class="form-control" rows="4" placeholder="Describe your support issue…"
+              @bind="_text"></textarea>
+</div>
+
+<button class="btn btn-primary" @onclick="SendAsync" disabled="@_sending">Send</button>
+
+@if (_sentId is not null)
+{
+    <p class="mt-3 text-success">Sent: @_sentId</p>
+}
+
+@code {
+    string _text = string.Empty;
+    Guid? _sentId;
+    bool _sending;
+
+    async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_text)) return;
+
+        _sending = true;
+        _sentId = null;
+
+        var message = new SupportMessage(Guid.NewGuid(), _text, DateTimeOffset.UtcNow);
+        await using var sender = ServiceBus.CreateSender(Topics.Incoming);
+        await sender.SendMessageAsync(new ServiceBusMessage(BinaryData.FromObjectAsJson(message)));
+
+        _sentId = message.Id;
+        _text = string.Empty;
+        _sending = false;
+    }
+}

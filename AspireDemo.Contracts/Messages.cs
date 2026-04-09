@@ -1,0 +1,19 @@
+namespace AspireDemo.Contracts;
+
+public record SupportMessage(Guid Id, string CustomerText, DateTimeOffset ReceivedAt);
+
+public record ClassifiedMessage(Guid Id, string CustomerText, string Category, double Confidence, DateTimeOffset ClassifiedAt);
+
+public record HandledMessage(Guid Id, string CustomerText, string Category, string Response, DateTimeOffset HandledAt);
+
+public static class Topics
+{
+    public const string Incoming = "support.incoming";
+    public const string Classified = "support.classified";
+}
+
+public static class Subscriptions
+{
+    public const string ClassifierSub = "classifier-sub";
+    public const string HandlerSub = "handler-sub";
+}
