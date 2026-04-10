@@ -485,3 +485,4 @@ $RECYCLE.BIN/
 .claude/worktrees/
 .claude/settings.local.json
 .azure
+CLAUDE.md
