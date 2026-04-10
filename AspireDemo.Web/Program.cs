@@ -6,7 +6,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
-builder.AddRedisOutputCache("cache");
+// TODO: Redis cache deferred to a future slice. Re-enable when wiring
+// the classification cache properly.
+// builder.AddRedisOutputCache("cache");
 builder.AddAzureServiceBusClient("messaging");
 
 // Live department view: shared singleton state + background relay from Service Bus.
@@ -30,7 +32,7 @@ app.UseHttpsRedirection();
 
 app.UseAntiforgery();
 
-app.UseOutputCache();
+// app.UseOutputCache(); // Redis cache deferred
 
 app.MapStaticAssets();
 
