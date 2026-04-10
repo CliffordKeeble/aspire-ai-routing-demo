@@ -1,7 +1,182 @@
-﻿@page "/"
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>AI-Assisted Support Routing</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="landing">
+    <section class="hero">
+        <h1>AI-Assisted Support Routing</h1>
+        <p class="hero-subtitle">Messages classified and routed in real time via Azure Service Bus</p>
+    </section>
 
-Welcome to your new app.
+    <section class="pipeline">
+        <div class="pipeline-step">
+            <div class="pipeline-box">Customer Message</div>
+            <p class="pipeline-desc">Customer sends a support request</p>
+        </div>
+        <div class="pipeline-arrow" aria-hidden="true"></div>
+        <div class="pipeline-step">
+            <div class="pipeline-box">AI Classifier</div>
+            <p class="pipeline-desc">System classifies by content</p>
+        </div>
+        <div class="pipeline-arrow" aria-hidden="true"></div>
+        <div class="pipeline-step">
+            <div class="pipeline-box">Department Inbox</div>
+            <p class="pipeline-desc">Routed to the right team in real time</p>
+        </div>
+    </section>
+
+    <section class="landing-actions">
+        <a class="btn btn-primary btn-lg" href="send-message">Send a Message</a>
+        <a class="btn btn-outline-secondary btn-lg" href="departments">View Departments</a>
+    </section>
+
+    <section class="how-it-works">
+        <h2>How it works</h2>
+        <p>
+            .NET Aspire orchestrates three workers communicating via Azure Service Bus topics.
+            When a message arrives, the Classifier worker analyses the content and publishes a
+            classified message to the next topic. The Handler worker picks it up, generates a
+            response, and pushes the result to the Departments view in real time.
+        </p>
+        <p>
+            The classifier sits behind an IMessageClassifier interface &mdash; currently a keyword
+            stub, with the seam ready for Azure OpenAI to drop in. Every message hop is traced
+            end-to-end via OpenTelemetry and visible in the Aspire dashboard.
+        </p>
+    </section>
+
+    <footer class="tech-stack">
+        .NET 10 &middot; Aspire 9.5 &middot; Azure Service Bus &middot; Azure Container Apps &middot; Blazor Server &middot; OpenTelemetry
+    </footer>
+</div>
+
+<style>
+    .landing {
+        max-width: 48rem;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    .hero {
+        text-align: center;
+        margin-bottom: 2.5rem;
+    }
+
+    .hero h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1.1rem;
+        color: #6c757d;
+        margin: 0;
+    }
+
+    .pipeline {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 0;
+        margin-bottom: 2.5rem;
+    }
+
+    .pipeline-step {
+        text-align: center;
+        flex: 0 1 10rem;
+    }
+
+    .pipeline-box {
+        border: 2px solid #0d6efd;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+        background: #f8f9fa;
+        color: #212529;
+    }
+
+    .pipeline-desc {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 0.4rem;
+    }
+
+    .pipeline-arrow {
+        flex: 0 0 2.5rem;
+        align-self: center;
+        height: 2px;
+        background: #adb5bd;
+        position: relative;
+        margin-top: -1.2rem;
+    }
+
+    .pipeline-arrow::after {
+        content: '';
+        position: absolute;
+        right: -1px;
+        top: -4px;
+        border: 5px solid transparent;
+        border-left: 7px solid #adb5bd;
+    }
+
+    .landing-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 2.5rem;
+        flex-wrap: wrap;
+    }
+
+    .how-it-works {
+        margin-bottom: 2rem;
+    }
+
+    .how-it-works h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+    }
+
+    .how-it-works p {
+        color: #495057;
+        line-height: 1.7;
+        margin-bottom: 0.75rem;
+    }
+
+    .tech-stack {
+        text-align: center;
+        font-size: 0.8rem;
+        color: #adb5bd;
+        padding-top: 1rem;
+        border-top: 1px solid #eef0f2;
+    }
+
+    @@media (max-width: 640px) {
+        .pipeline {
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        .pipeline-arrow {
+            width: 2px;
+            height: 1.5rem;
+            margin-top: 0;
+        }
+
+        .pipeline-arrow::after {
+            right: -4px;
+            top: auto;
+            bottom: -1px;
+            border: 5px solid transparent;
+            border-top: 7px solid #adb5bd;
+            border-left: 5px solid transparent;
+        }
+
+        .hero h1 {
+            font-size: 1.5rem;
+        }
+    }
+</style>

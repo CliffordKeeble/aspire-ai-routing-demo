@@ -28,6 +28,7 @@
       "Read(//tmp/**)",
       "Bash(git rm:*)",
       "Bash(git checkout:*)",
+      "Bash(git push:*)",
       "Bash(git merge:*)",
       "Bash(azd version:*)",
       "Bash(powershell -Command \"Get-Command azd -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
@@ -46,7 +47,6 @@
       "Bash(az account:*)"
     ],
     "deny": [
-      "Bash(git push:*)",
       "Bash(git reset --hard:*)",
       "Bash(git clean:*)",
       "Bash(rm:*)",
