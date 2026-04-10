@@ -2,7 +2,9 @@ using AspireDemo.Contracts;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var cache = builder.AddRedis("cache");
+// TODO: Redis cache deferred to a future slice. Re-enable when wiring
+// the classification cache properly. Costs ~£12/month if provisioned.
+// var cache = builder.AddRedis("cache");
 
 var messaging = builder.AddAzureServiceBus("messaging")
     .RunAsEmulator();
@@ -20,17 +22,17 @@ messaging.AddServiceBusTopic(Slug(Topics.Handled), Topics.Handled)
     .AddServiceBusSubscription(Subscriptions.WebFrontend);
 
 builder.AddProject<Projects.AspireDemo_Classifier>("classifier")
-    .WithReference(cache)
+    // .WithReference(cache)
     .WithReference(messaging)
     // WaitFor is a dev-only orchestration hint. In production, resilience
     // comes from the Service Bus SDK retry policy and worker startup health probes.
-    .WaitFor(cache)
+    // .WaitFor(cache)
     .WaitFor(messaging);
 
 builder.AddProject<Projects.AspireDemo_Handler>("handler")
-    .WithReference(cache)
+    // .WithReference(cache)
     .WithReference(messaging)
-    .WaitFor(cache)
+    // .WaitFor(cache)
     .WaitFor(messaging);
 
 builder.AddProject<Projects.AspireDemo_Web>("webfrontend")
