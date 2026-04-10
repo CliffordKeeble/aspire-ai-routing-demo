@@ -4,12 +4,30 @@
 @using AspireDemo.Contracts
 @inject ServiceBusClient ServiceBus
 
-<PageTitle>Send Message</PageTitle>
+<PageTitle>Send a Message — AI Support Routing</PageTitle>
 
 <h1>Send Support Message</h1>
 
+<p class="send-guidance">
+    Type a customer support message below. The system will classify it by content and
+    route it to the appropriate department in real time.
+</p>
+
+<div class="example-chips">
+    <span class="example-label">Try an example:</span>
+    <button class="btn btn-sm btn-outline-primary example-chip" @onclick='() => SetExample("My invoice is wrong")'>
+        "My invoice is wrong" <span class="chip-tag">Billing</span>
+    </button>
+    <button class="btn btn-sm btn-outline-primary example-chip" @onclick='() => SetExample("I can\u0027t log in to my account")'>
+        "I can't log in to my account" <span class="chip-tag">Account</span>
+    </button>
+    <button class="btn btn-sm btn-outline-primary example-chip" @onclick='() => SetExample("I want to cancel my subscription")'>
+        "I want to cancel my subscription" <span class="chip-tag">Cancellation</span>
+    </button>
+</div>
+
 <div class="mb-3">
-    <textarea class="form-control" rows="4" placeholder="Describe your support issue…"
+    <textarea class="form-control" rows="4" placeholder="Describe your support issue..."
               @bind="_text"></textarea>
 </div>
 
@@ -17,13 +35,61 @@
 
 @if (_sentId is not null)
 {
-    <p class="mt-3 text-success">Sent: @_sentId</p>
+    <p class="mt-3 text-success">
+        Sent! Message <code>@_sentId.Value.ToString("N")[..8]</code> is being classified and routed.
+        <a href="departments">View Departments</a> to watch it arrive.
+    </p>
 }
+
+<style>
+    .send-guidance {
+        color: #495057;
+        margin-bottom: 1rem;
+        max-width: 36rem;
+    }
+
+    .example-chips {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .example-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+
+    .example-chip {
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+
+    .chip-tag {
+        display: inline-block;
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: #e9ecef;
+        color: #495057;
+        border-radius: 999px;
+        padding: 0.05rem 0.4rem;
+        margin-left: 0.25rem;
+        vertical-align: middle;
+    }
+</style>
 
 @code {
     string _text = string.Empty;
     Guid? _sentId;
     bool _sending;
+
+    void SetExample(string text)
+    {
+        _text = text;
+        _sentId = null;
+    }
 
     async Task SendAsync()
     {
