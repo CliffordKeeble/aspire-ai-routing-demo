@@ -24,7 +24,7 @@ document are part of the deliverable.
 ## Stack
 
 - .NET 9, C#
-- .NET Aspire 9.x (orchestration, ServiceDefaults, dashboard)
+- .NET Aspire 13.4 (orchestration, ServiceDefaults, dashboard)
 - Blazor Server + SignalR (front end + live updates)
 - Azure Service Bus (topics/subscriptions; emulator locally, real in Azure)
 - Azure OpenAI (classifier; swappable via `IMessageClassifier`)
@@ -130,13 +130,16 @@ purpose.
 | 6 | 2026-04-09 | Contracts as a separate class library | Single source of truth for message shapes and topic names. |
 | 7 | 2026-04-09 | Aspire resource names vs Service Bus topic names | Aspire resource names must be valid identifiers (no dots); Service Bus topic names can contain dots. The `AddServiceBusTopic(resourceName, topicName)` overload separates the two. Contracts constants stay dot-namespaced as the on-the-wire names; a local `Slug()` helper in `AppHost.cs` derives the resource name by replacing dots with hyphens. |
 | 8 | 2026-04-09 | Service Bus emulator EULA handled automatically | `Aspire.Hosting.Azure.ServiceBus` 9.5.0's `RunAsEmulator()` handles the emulator licence acceptance internally. No explicit `ACCEPT_EULA` environment variable or fluent call needed. Verified by the dashboard coming up green on first F5. |
-| 9 | 2026-04-09 | Aspire client libraries version independently | `Aspire.Azure.Messaging.ServiceBus` (client integration) is on 13.x while `Aspire.Hosting.*` packages are on 9.x. Both belong to the Aspire 9.x release train; the version numbers have different lineages. Packages are compatible by contract, not by version match. No pinning required. |
+| 9 | 2026-04-09 | Aspire client libraries version independently | **Superseded by #10.** `Aspire.Azure.Messaging.ServiceBus` (client integration) is on 13.x while `Aspire.Hosting.*` packages are on 9.x. Both belong to the Aspire 9.x release train; the version numbers have different lineages. Packages are compatible by contract, not by version match. No pinning required. |
+| 10 | 2026-07-17 | Aspire upgraded to 13.4.6; AppHost migrated to the SDK-attribute project format | Supersedes #9 — hosting and client packages now share one version, so the "different lineages" reasoning no longer applies. `aspire update` moved the AppHost from `<Project Sdk="Microsoft.NET.Sdk">` plus a separate `<Sdk Name="Aspire.AppHost.Sdk" Version="9.5.0" />` element to the single-line `<Project Sdk="Aspire.AppHost.Sdk/13.4.6">` form, and dropped `Aspire.Hosting.AppHost` — the SDK now brings it in, so an explicit reference is obsolete. Note the 9.5.0 SDK element had been left behind by the 13.2.2 bump (`540f4ba`), which updated `PackageReference` lines only; the project ran regardless. `net9.0` restores cleanly against 13.4.6, so no retarget was forced (see open items). Verified: build green, 15/15 tests, full topology reaching `Running` under `aspire run`. |
 
 ## Open items
 
 - Worker health checks (parked — not blocking the demo).
 - Anthropic implementation of `IMessageClassifier` (deferred — proves the seam earns its keep).
 - README with screenshots and the design-notes section (Day 2).
+- **Target framework split.** Classifier, Handler and Tests target `net10.0`; ApiService, AppHost, ServiceDefaults and Web target `net9.0`. `Contracts` multi-targets `net9.0;net10.0` to bridge the two, which is what makes the split compile. Present since the initial scaffold (`e5070c4`), not introduced by any later bump. Unifying on `net10.0` would let Contracts drop its multi-target; deliberately deferred from the 13.4 upgrade so a version change and a runtime change wouldn't land together.
+- **`aspire update` writes a broken `nuget.config`.** It emits a `packageSourceMapping` keyed on the source URL while restore resolves against a source named `nuget.org`, so every package becomes unresolvable (`NU1100`) and restore fails. Deleting the generated file fixes it — nothing here needs it. Expect this to recur on the next `aspire update`.
 
 ## What this document is not
 
