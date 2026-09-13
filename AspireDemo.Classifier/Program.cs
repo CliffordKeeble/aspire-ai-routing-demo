@@ -3,7 +3,7 @@ using AspireDemo.Classifier;
 var builder = Host.CreateApplicationBuilder(args);
 builder.AddServiceDefaults();
 builder.AddAzureServiceBusClient("messaging");
-builder.Services.AddSingleton<IMessageClassifier, KeywordClassifier>();
+builder.AddMessageClassifier();
 builder.Services.AddHostedService<Worker>();
 
 var host = builder.Build();

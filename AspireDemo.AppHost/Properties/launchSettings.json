@@ -9,6 +9,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "DOTNET_ENVIRONMENT": "Development",
+        "Classifier__Provider": "ollama",
         "ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:21260",
         "ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:22028"
       }
@@ -21,6 +22,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "DOTNET_ENVIRONMENT": "Development",
+        "Classifier__Provider": "ollama",
         "ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL": "http://localhost:19171",
         "ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL": "http://localhost:20240"
       }

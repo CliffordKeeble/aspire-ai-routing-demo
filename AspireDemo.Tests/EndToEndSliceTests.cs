@@ -19,7 +19,12 @@ public class EndToEndSliceTests(ITestOutputHelper output)
 
         var capture = new CapturingLoggerProvider();
 
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.AspireDemo_AppHost>(ct);
+        // Keyword mode, set on the AppHost itself: the AppHost then declares no model
+        // resource at all, so this suite never pulls an image or waits on a model.
+        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.AspireDemo_AppHost>(
+            ["Classifier:Provider=keyword"], ct);
+        Assert.DoesNotContain(appHost.Resources, r => r.Name is "ollama" or "classifier-model");
+
         appHost.Services.AddLogging(b =>
         {
             b.SetMinimumLevel(LogLevel.Information);

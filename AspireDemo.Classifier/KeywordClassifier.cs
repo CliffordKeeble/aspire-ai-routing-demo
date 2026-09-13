@@ -1,7 +1,9 @@
+using AspireDemo.Contracts;
+
 namespace AspireDemo.Classifier;
 
-// Stub keyword-based implementation. Replaced by an Azure OpenAI implementation
-// behind the same IMessageClassifier seam in a later slice.
+// Keyword matching: same input, same answer, no network. The default provider,
+// the fallback behind ChatClientClassifier, and what the integration suite runs.
 public sealed class KeywordClassifier : IMessageClassifier
 {
     public Task<string> ClassifyAsync(string customerText, CancellationToken ct)
@@ -9,10 +11,10 @@ public sealed class KeywordClassifier : IMessageClassifier
         var text = customerText ?? string.Empty;
 
         string category =
-            ContainsAny(text, "invoice", "bill", "charge") ? "Billing"
-            : ContainsAny(text, "password", "login", "log in", "locked out") ? "Account"
-            : ContainsAny(text, "cancel", "unsubscribe") ? "Cancellation"
-            : "Other";
+            ContainsAny(text, "invoice", "bill", "charge") ? Categories.Billing
+            : ContainsAny(text, "password", "login", "log in", "locked out") ? Categories.Account
+            : ContainsAny(text, "cancel", "unsubscribe") ? Categories.Cancellation
+            : Categories.Other;
 
         return Task.FromResult(category);
     }

@@ -54,9 +54,9 @@ public class Worker(ILogger<Worker> logger, ServiceBusClient client) : Backgroun
 
     private static string BuildResponse(string category) => category switch
     {
-        "Billing" => "Thanks — we've routed your billing query to our finance team and will respond within 1 business day.",
-        "Account" => "We can help with account access. A reset link is on its way to your registered email.",
-        "Cancellation" => "We're sorry to see you go. A retention specialist will contact you shortly.",
+        Categories.Billing => "Thanks — we've routed your billing query to our finance team and will respond within 1 business day.",
+        Categories.Account => "We can help with account access. A reset link is on its way to your registered email.",
+        Categories.Cancellation => "We're sorry to see you go. A retention specialist will contact you shortly.",
         _ => "Thanks for getting in touch. We'll route this to the right team and respond soon."
     };
 
