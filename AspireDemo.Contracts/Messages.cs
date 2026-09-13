@@ -6,11 +6,6 @@ public record ClassifiedMessage(Guid Id, string CustomerText, string Category, D
 
 public record HandledMessage(Guid Id, string Category, string OriginalText, string Response, DateTimeOffset HandledAt);
 
-public interface IMessageClassifier
-{
-    Task<string> ClassifyAsync(string customerText, CancellationToken ct);
-}
-
 public static class Topics
 {
     public const string Incoming = "support.incoming";

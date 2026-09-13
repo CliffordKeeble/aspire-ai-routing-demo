@@ -1,5 +1,3 @@
-using AspireDemo.Contracts;
-
 namespace AspireDemo.Classifier;
 
 // Stub keyword-based implementation. Replaced by an Azure OpenAI implementation

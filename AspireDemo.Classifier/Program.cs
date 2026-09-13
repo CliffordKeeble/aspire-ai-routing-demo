@@ -1,5 +1,4 @@
 using AspireDemo.Classifier;
-using AspireDemo.Contracts;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.AddServiceDefaults();
