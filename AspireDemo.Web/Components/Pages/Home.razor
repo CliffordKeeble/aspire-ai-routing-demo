@@ -39,14 +39,17 @@
             response, and pushes the result to the Departments view in real time.
         </p>
         <p>
-            The classifier sits behind an IMessageClassifier interface &mdash; currently a keyword
-            stub, with the seam ready for Azure OpenAI to drop in. Every message hop is traced
-            end-to-end via OpenTelemetry and visible in the Aspire dashboard.
+            The classifier sits behind an IMessageClassifier interface, and the implementation is
+            chosen from configuration rather than from code: a keyword matcher (the default, and what
+            the tests run), a local model through Ollama (what F5 runs), or OpenAI. Model answers fall
+            back to the keyword matcher on a bad reply, a timeout or an error, so nothing outside the
+            declared categories is ever published. Every hop is traced end-to-end via OpenTelemetry,
+            including the model call, and visible in the Aspire dashboard.
         </p>
     </section>
 
     <footer class="tech-stack">
-        .NET 10 &middot; Aspire 9.5 &middot; Azure Service Bus &middot; Azure Container Apps &middot; Blazor Server &middot; OpenTelemetry
+        .NET 10 &middot; Aspire 13.4.6 &middot; Azure Service Bus (emulator locally) &middot; Blazor Server &middot; OpenTelemetry
     </footer>
 </div>
 
