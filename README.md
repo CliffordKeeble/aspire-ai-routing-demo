@@ -33,6 +33,13 @@ Model calls fall back to the keyword matcher on no match, timeout or exception. 
 increments a counter tagged with the provider and whether it fell back — **the fallback share is the
 instrument that says whether this is still doing what it claims.**
 
+**No accuracy comparison has been run, and the model is not claimed to be better.** Nothing in this
+repository measures whether `ollama` or `openai` classifies more correctly than `KeywordClassifier`:
+there is no evaluation set, no scored run, and the counter above records the *fallback share*, not
+correctness. The model is here to demonstrate the seam, the provider switch and the telemetry — so
+read its presence as an integration, not as a result. **An evaluation set is the next honest step,
+and until it exists the keyword matcher is the one whose behaviour is fully known.**
+
 ## What is traced
 
 `ServiceDefaults` registers each application's own name as a tracing source. The classifier's telemetry
