@@ -26,12 +26,12 @@ document are part of the deliverable.
 ## Stack
 
 - .NET 10, C#
-- .NET Aspire 13.4 (orchestration, ServiceDefaults, dashboard)
+- .NET Aspire 13.6 (orchestration, ServiceDefaults, dashboard)
 - Blazor Server + SignalR (front end + live updates)
 - Azure Service Bus (topics/subscriptions; emulator locally, real in Azure)
 - `Microsoft.Extensions.AI` over a local Ollama model or OpenAI, chosen from configuration
   behind `IMessageClassifier`. **Not Azure OpenAI** (decision 11)
-- ~~Redis (classification cache)~~ — **deferred, commented out in AppHost and Web** (decision 12)
+- ~~Redis (classification cache)~~ — **deferred, commented out in AppHost and Web, and the Redis packages are removed** (decision 12)
 - xUnit + Aspire.Hosting.Testing (integration tests against the running AppHost)
 - `azd` with a container-app host via `azure.yaml`. **No Bicep is authored in this repository** —
   Aspire generates the deployment manifest at publish time, and nothing here has been deployed
@@ -59,8 +59,7 @@ reviewer can see the choice was deliberate.
 **Why Contracts as a class library.** Three projects need the same record
 shapes and the same topic/subscription names. Without a shared library, those
 definitions duplicate and drift. With it, there is one source of truth and the
-serialisation contract is explicit. Six lines of code, large architectural
-payoff.
+serialisation contract is explicit.
 
 ## The seams
 
@@ -96,6 +95,8 @@ This makes each worker independently testable and independently scalable.
 
 - `support.incoming` topic with `classifier-sub` subscription.
 - `support.classified` topic with `handler-sub` subscription.
+- `support.handled` topic with `webfrontend-sub` subscription. The end-to-end test also asks for a
+  `test-observer-sub` on it (`Testing:ObserveHandled=true`); a normal run does not declare it.
 - Local: emulator container via `RunAsEmulator()`.
 - Azure: real Service Bus namespace provisioned by `azd up`.
 - Connection strings injected automatically by Aspire.
@@ -104,7 +105,7 @@ This makes each worker independently testable and independently scalable.
 
 ⛔ **DEFERRED AND NOT WIRED. This section describes an intention, not the build.** The resource is
 commented out in `AppHost.cs`, `AddRedisOutputCache` and `UseOutputCache` are commented out in the web
-project, and the package references are left in place. A reviewer will see no `cache` in the dashboard,
+project, and the Redis package references are removed. A reviewer will see no `cache` in the dashboard,
 and that is correct.
 
 The design, kept for when it returns: key = hash of message text, value = category; first message pays
@@ -134,8 +135,7 @@ claims**, and it can go red.
 `WaitFor` in AppHost is a dev-only orchestration hint — it sequences container
 startup so workers don't crash trying to reach an unavailable Service Bus. In
 production, the same robustness comes from the Service Bus SDK's built-in
-retry policy and the worker's startup health probe. Both layers exist on
-purpose.
+retry policy. Both layers exist on purpose.
 
 ## Decisions log
 

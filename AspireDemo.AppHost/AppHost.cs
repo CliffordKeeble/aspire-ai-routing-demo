@@ -35,7 +35,7 @@ var classifier = builder.AddProject<Projects.AspireDemo_Classifier>("classifier"
     // .WithReference(cache)
     .WithReference(messaging)
     // WaitFor is a dev-only orchestration hint. In production, resilience
-    // comes from the Service Bus SDK retry policy and worker startup health probes.
+    // comes from the Service Bus SDK retry policy.
     // .WaitFor(cache)
     .WaitFor(messaging)
     .WithEnvironment("Classifier__Provider", classifierProvider);
