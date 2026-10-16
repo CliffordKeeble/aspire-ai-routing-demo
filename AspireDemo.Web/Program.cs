@@ -13,6 +13,7 @@ builder.AddAzureServiceBusClient("messaging");
 
 // Live department view: shared singleton state + background relay from Service Bus.
 builder.Services.AddSingleton<SupportMessageStore>();
+builder.Services.AddSingleton<ISupportMessagePublisher, ServiceBusSupportMessagePublisher>();
 builder.Services.AddHostedService<HandledMessageRelay>();
 
 // Add services to the container.

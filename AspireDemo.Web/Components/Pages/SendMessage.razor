@@ -1,8 +1,9 @@
 @page "/send-message"
 @rendermode InteractiveServer
-@using Azure.Messaging.ServiceBus
 @using AspireDemo.Contracts
-@inject ServiceBusClient ServiceBus
+@using AspireDemo.Web.Services
+@inject ISupportMessagePublisher Publisher
+@inject ILogger<SendMessage> Logger
 
 <PageTitle>Send a Message — AI Support Routing</PageTitle>
 
@@ -28,10 +29,15 @@
 
 <div class="mb-3">
     <textarea class="form-control" rows="4" placeholder="Describe your support issue..."
-              @bind="_text"></textarea>
+              maxlength="@ISupportMessagePublisher.MaxCustomerTextLength" @bind="_text"></textarea>
 </div>
 
 <button class="btn btn-primary" @onclick="SendAsync" disabled="@_sending">Send</button>
+
+@if (_error is not null)
+{
+    <p class="mt-3 text-danger" role="alert">@_error</p>
+}
 
 @if (_sentId is not null)
 {
@@ -84,6 +90,7 @@
     string _text = string.Empty;
     Guid? _sentId;
     bool _sending;
+    string? _error;
 
     void SetExample(string text)
     {
@@ -97,13 +104,26 @@
 
         _sending = true;
         _sentId = null;
+        _error = null;
 
         var message = new SupportMessage(Guid.NewGuid(), _text, DateTimeOffset.UtcNow);
-        await using var sender = ServiceBus.CreateSender(Topics.Incoming);
-        await sender.SendMessageAsync(new ServiceBusMessage(BinaryData.FromObjectAsJson(message)));
+        try
+        {
+            await Publisher.PublishAsync(message);
 
-        _sentId = message.Id;
-        _text = string.Empty;
-        _sending = false;
+            _sentId = message.Id;
+            _text = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            // A failed send must not take the circuit down: show it, keep the typed
+            // text so nothing is lost, and let the customer try again.
+            LogSendFailed(Logger, ex, message.Id);
+            _error = "The message could not be sent. Your text is still here; please try again.";
+        }
+        finally
+        {
+            _sending = false;
+        }
     }
 }
