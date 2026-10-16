@@ -14,7 +14,7 @@ public sealed record ChatClientClassifierOptions(string Provider, TimeSpan Timeo
 // client's own telemetry cannot see it: a junk reply is a successful call from
 // its point of view. This class therefore emits its own activity and says on it
 // whether the answer came from the model or from the fallback.
-public sealed class ChatClientClassifier(
+public sealed partial class ChatClientClassifier(
     IChatClient chatClient,
     KeywordClassifier fallback,
     ChatClientClassifierOptions options,
@@ -70,10 +70,11 @@ public sealed class ChatClientClassifier(
 
         var fallbackCategory = await fallback.ClassifyAsync(customerText ?? string.Empty, ct);
 
-        logger.LogWarning(
-            error,
-            "Classifier fell back to keyword matching. Provider={Provider} Reason={FallbackReason} Reply={Reply} Category={Category}",
-            options.Provider, reason, Truncate(reply), fallbackCategory);
+        // The warning carries the reply's length, not its text: a model's reply to a
+        // customer's message can echo what the customer wrote. The text is at Debug.
+        LogFallback(logger, error, options.Provider, reason, reply?.Length ?? 0, fallbackCategory);
+        if (reply is not null && logger.IsEnabled(LogLevel.Debug))
+            LogRejectedReply(logger, Truncate(reply));
 
         ClassifierTelemetry.RecordClassification(activity, options.Provider, fallbackCategory, reason);
         return fallbackCategory;
@@ -117,6 +118,14 @@ public sealed class ChatClientClassifier(
         MaxOutputTokens = 16,
     };
 
-    private static string? Truncate(string? reply) =>
-        reply is { Length: > MaxLoggedReplyLength } ? reply[..MaxLoggedReplyLength] + "…" : reply;
+    private static string Truncate(string reply) =>
+        reply.Length > MaxLoggedReplyLength ? reply[..MaxLoggedReplyLength] + "…" : reply;
+
+    [LoggerMessage(Level = LogLevel.Warning,
+        Message = "Classifier fell back to keyword matching. Provider={Provider} Reason={FallbackReason} ReplyLength={ReplyLength} Category={Category}")]
+    private static partial void LogFallback(
+        ILogger logger, Exception? exception, string provider, string fallbackReason, int replyLength, string category);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Model reply that was not a category: {Reply}")]
+    private static partial void LogRejectedReply(ILogger logger, string reply);
 }

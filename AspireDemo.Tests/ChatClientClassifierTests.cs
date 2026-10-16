@@ -48,6 +48,21 @@ public class ChatClientClassifierTests
     }
 
     [Fact]
+    public async Task Fallback_warning_carries_the_reply_length_and_the_reply_text_goes_to_debug()
+    {
+        const string reply = "Category: Billing";
+        var (classifier, logger) = Create(Reply(reply));
+
+        await classifier.ClassifyAsync(NoKeywordText, TestContext.Current.CancellationToken);
+
+        var warning = Assert.Single(logger.Warnings);
+        Assert.Contains($"ReplyLength={reply.Length}", warning.Message);
+        Assert.DoesNotContain(reply, warning.Message);
+        var debug = Assert.Single(logger.At(LogLevel.Debug));
+        Assert.Contains(reply, debug.Message);
+    }
+
+    [Fact]
     public async Task Throwing_client_falls_back_and_logs()
     {
         var (classifier, logger) = Create((_, _) => throw new HttpRequestException("connection refused"));
@@ -141,6 +156,11 @@ internal sealed class ListLogger<T> : ILogger<T>
     public IReadOnlyList<(LogLevel Level, string Message, Exception? Exception)> Warnings
     {
         get { lock (_entries) return _entries.Where(e => e.Level == LogLevel.Warning).ToList(); }
+    }
+
+    public IReadOnlyList<(LogLevel Level, string Message, Exception? Exception)> At(LogLevel level)
+    {
+        lock (_entries) return _entries.Where(e => e.Level == level).ToList();
     }
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
