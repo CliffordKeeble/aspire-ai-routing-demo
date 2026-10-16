@@ -12,11 +12,19 @@
 
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.Testing" Version="13.4.6" />
+    <PackageReference Include="Aspire.Hosting.Testing" Version="13.6.1" />
     <PackageReference Include="coverlet.collector" Version="8.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <!-- Direct reference to lift a transitive dependency off a known advisory.
+         Why: GHSA-qhrr-8q5h-9q3h (moderate) affects MessagePack 2.5.302.
+         What pulls it in: Aspire.Hosting.Testing and the AppHost reach Aspire.Hosting 13.6.1, which
+         depends on StreamJsonRpc 2.25.29, which asks for MessagePack 2.5.302.
+         Why 2.5.x: StreamJsonRpc is built against the 2.x API; 3.x is a major version this
+         change does not need.
+         Remove when: Aspire's own dependency moves past 2.5.302. -->
+    <PackageReference Include="MessagePack" Version="2.5.307" />
     <PackageReference Include="Meziantou.Extensions.Logging.Xunit.v3" Version="1.1.26" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">

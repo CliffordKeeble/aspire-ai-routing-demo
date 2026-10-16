@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+<Project Sdk="Aspire.AppHost.Sdk/13.6.1">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,6 +6,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>1572c207-36c4-4f68-96ed-896bc41f451c</UserSecretsId>
+    <!-- ASPIRE010 asks the AppHost to opt in to the Aspire CLI bundle. This repository is
+         meant to run on the .NET SDK and Docker alone (F5 or `dotnet run`), so it keeps the
+         NuGet-restored orchestration. The documented alternative, AspireUseCliBundle=true,
+         would make the Aspire CLI a prerequisite. -->
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,9 +21,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.Azure.ServiceBus" Version="13.4.6" />
-    <PackageReference Include="Aspire.Hosting.Redis" Version="13.4.6" />
-    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.4.0" />
+    <PackageReference Include="Aspire.Hosting.Azure.ServiceBus" Version="13.6.1" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.6.0" />
+    <!-- Direct reference to lift a transitive dependency off a known advisory.
+         Why: GHSA-qhrr-8q5h-9q3h (moderate) affects MessagePack 2.5.302.
+         What pulls it in: Aspire.Hosting 13.6.1 depends on StreamJsonRpc 2.25.29, which asks for
+         MessagePack 2.5.302. A direct reference wins over the transitive one.
+         Why 2.5.x: StreamJsonRpc is built against the 2.x API; 3.x is a major version this
+         change does not need.
+         Remove when: Aspire's own dependency moves past 2.5.302. -->
+    <PackageReference Include="MessagePack" Version="2.5.307" />
   </ItemGroup>
 
 </Project>
