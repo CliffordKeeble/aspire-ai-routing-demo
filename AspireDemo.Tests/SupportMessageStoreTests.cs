@@ -18,6 +18,39 @@ public class SupportMessageStoreTests
     }
 
     [Fact]
+    public void Add_ignores_an_Id_it_already_holds()
+    {
+        // Service Bus delivery is at-least-once, so the relay can see one message twice.
+        var store = new SupportMessageStore();
+        var raised = 0;
+        store.MessageAdded += () => raised++;
+        var message = Make("Billing");
+
+        store.Add(message);
+        store.Add(message);
+
+        Assert.Equal(message.Id, Assert.Single(store.GetForCategory("Billing")).Id);
+        Assert.Equal(1, raised);
+    }
+
+    [Fact]
+    public void Add_accepts_an_Id_again_once_the_cap_has_dropped_it()
+    {
+        var store = new SupportMessageStore();
+        var first = Make("Billing", "first");
+        store.Add(first);
+        for (var i = 0; i < SupportMessageStore.MaxPerCategory; i++)
+        {
+            store.Add(Make("Billing", $"msg {i}"));
+        }
+        Assert.DoesNotContain(store.GetForCategory("Billing"), m => m.Id == first.Id);
+
+        store.Add(first);
+
+        Assert.Contains(store.GetForCategory("Billing"), m => m.Id == first.Id);
+    }
+
+    [Fact]
     public void Add_routes_to_correct_category_only()
     {
         var store = new SupportMessageStore();

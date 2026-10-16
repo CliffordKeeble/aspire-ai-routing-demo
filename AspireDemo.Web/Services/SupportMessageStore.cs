@@ -16,6 +16,9 @@ public sealed class SupportMessageStore
         ["Billing", "Account", "Cancellation", "Other"];
 
     private readonly object _gate = new();
+    // The Ids currently held, so a redelivered message is ignored. Service Bus
+    // delivery is at-least-once. An Id leaves this set when the cap drops it.
+    private readonly HashSet<Guid> _held = [];
     private readonly Dictionary<string, LinkedList<HandledMessage>> _byCategory;
 
     public SupportMessageStore()
@@ -31,10 +34,16 @@ public sealed class SupportMessageStore
 
         lock (_gate)
         {
+            if (!_held.Add(message.Id))
+            {
+                return;
+            }
+
             var list = _byCategory[bucket];
             list.AddLast(message);
             while (list.Count > MaxPerCategory)
             {
+                _held.Remove(list.First!.Value.Id);
                 list.RemoveFirst();
             }
         }
