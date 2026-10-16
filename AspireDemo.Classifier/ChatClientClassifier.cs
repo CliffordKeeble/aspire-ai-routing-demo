@@ -73,8 +73,11 @@ public sealed partial class ChatClientClassifier(
         // The warning carries the reply's length, not its text: a model's reply to a
         // customer's message can echo what the customer wrote. The text is at Debug.
         LogFallback(logger, error, options.Provider, reason, reply?.Length ?? 0, fallbackCategory);
-        if (reply is not null && logger.IsEnabled(LogLevel.Debug))
-            LogRejectedReply(logger, Truncate(reply));
+        if (logger.IsEnabled(LogLevel.Debug) && reply is not null)
+        {
+            var shownReply = Truncate(reply);
+            LogRejectedReply(logger, shownReply);
+        }
 
         ClassifierTelemetry.RecordClassification(activity, options.Provider, fallbackCategory, reason);
         return fallbackCategory;

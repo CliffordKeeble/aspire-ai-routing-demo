@@ -1,0 +1,12 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- The analyzer bar: the .NET analyzers at their recommended level, and a code-analysis
+         warning is an error. CodeAnalysisTreatWarningsAsErrors covers analyzer diagnostics only.
+         NuGet, SDK and Aspire warnings stay warnings on purpose: they depend on the machine
+         (feed state, SDK band, installed workloads), and a stranger's clone must still build. -->
+    <AnalysisLevel>10.0-recommended</AnalysisLevel>
+    <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

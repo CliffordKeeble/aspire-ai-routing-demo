@@ -1,3 +1,4 @@
+using System.Globalization;
 using AspireDemo.Contracts;
 using AspireDemo.Web.Components.Pages;
 using AspireDemo.Web.Services;
@@ -49,7 +50,7 @@ public class SendMessagePageTests : BunitContext
         var cut = Render<SendMessage>();
 
         Assert.Equal(
-            ISupportMessagePublisher.MaxCustomerTextLength.ToString(),
+            ISupportMessagePublisher.MaxCustomerTextLength.ToString(CultureInfo.InvariantCulture),
             cut.Find("textarea").GetAttribute("maxlength"));
     }
 

@@ -55,15 +55,21 @@ public partial class ClassificationWorker(
             new ServiceBusMessage(BinaryData.FromObjectAsJson(classified)),
             args.CancellationToken);
 
-        logger.LogInformation("Classifier classified: {Id} - {Category}", classified.Id, classified.Category);
+        LogClassified(logger, classified.Id, classified.Category);
         await args.CompleteMessageAsync(args.Message);
     }
 
     private Task HandleErrorAsync(ProcessErrorEventArgs args)
     {
-        logger.LogWarning(args.Exception, "Classifier processor error. Source={ErrorSource}", args.ErrorSource);
+        LogProcessorError(logger, args.Exception, args.ErrorSource);
         return Task.CompletedTask;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Classifier classified: {Id} - {Category}")]
+    private static partial void LogClassified(ILogger logger, Guid id, string category);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Classifier processor error. Source={ErrorSource}")]
+    private static partial void LogProcessorError(ILogger logger, Exception exception, ServiceBusErrorSource errorSource);
 
     [LoggerMessage(Level = LogLevel.Error,
         Message = "Dead-lettering message {MessageId} (delivery {DeliveryCount}): {Failure}")]

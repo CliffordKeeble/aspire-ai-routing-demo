@@ -48,6 +48,11 @@ public static class ClassifierRegistration
 
             case "ollama":
                 var (endpoint, model) = ReadOllamaConnection(builder.Configuration);
+                // Built directly, not from IHttpClientFactory, so the standard resilience handler that
+                // ServiceDefaults adds to every factory client does not wrap it. That handler's attempt
+                // timeout is 10 seconds by default, which would cut a slow local inference short and retry
+                // it. Here the classifier's own timeout (Classifier:TimeoutSeconds) and its fallback to the
+                // keyword matcher govern the call instead.
                 AddChatClientClassifier(builder, provider, timeout, new OllamaApiClient(endpoint, model));
                 break;
 
@@ -60,6 +65,8 @@ public static class ClassifierRegistration
                         "Set it with user secrets or the environment, never in a file in the repository.");
                 }
                 var openAIModel = builder.Configuration[OpenAIModelKey] ?? DefaultOpenAIModel;
+                // Also built outside IHttpClientFactory, for the Ollama client's reason above: the
+                // classifier's timeout and fallback govern the call, not the standard handler's 10 seconds.
                 AddChatClientClassifier(builder, provider, timeout, new OpenAI.Chat.ChatClient(openAIModel, apiKey).AsIChatClient());
                 break;
 

@@ -42,9 +42,8 @@ public partial class ResponseWorker(ILogger<ResponseWorker> logger, ServiceBusCl
 
         var response = BuildResponse(message.Category);
 
-        logger.LogInformation(
-            "Handler processed: {Id} - {Category} - {Response}",
-            message.Id, message.Category, response);
+        LogHandled(logger, message.Id, message.Category);
+        LogResponse(logger, message.Id, response);
 
         var handled = new HandledMessage(
             message.Id,
@@ -70,9 +69,19 @@ public partial class ResponseWorker(ILogger<ResponseWorker> logger, ServiceBusCl
 
     private Task HandleErrorAsync(ProcessErrorEventArgs args)
     {
-        logger.LogWarning(args.Exception, "Handler processor error. Source={ErrorSource}", args.ErrorSource);
+        LogProcessorError(logger, args.Exception, args.ErrorSource);
         return Task.CompletedTask;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Handler processed: {Id} - {Category}")]
+    private static partial void LogHandled(ILogger logger, Guid id, string category);
+
+    // The canned response is per-message detail, so it stays off until Debug is asked for.
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Handler response for {Id}: {Response}")]
+    private static partial void LogResponse(ILogger logger, Guid id, string response);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Handler processor error. Source={ErrorSource}")]
+    private static partial void LogProcessorError(ILogger logger, Exception exception, ServiceBusErrorSource errorSource);
 
     [LoggerMessage(Level = LogLevel.Error,
         Message = "Dead-lettering message {MessageId} (delivery {DeliveryCount}): {Failure}")]

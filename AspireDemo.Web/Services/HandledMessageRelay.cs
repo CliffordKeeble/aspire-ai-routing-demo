@@ -46,18 +46,22 @@ public sealed partial class HandledMessageRelay(
 
         store.Add(message);
 
-        logger.LogInformation(
-            "Relay received handled message: {Id} - {Category}",
-            message.Id, message.Category);
+        LogReceived(logger, message.Id, message.Category);
 
         await args.CompleteMessageAsync(args.Message);
     }
 
     private Task HandleErrorAsync(ProcessErrorEventArgs args)
     {
-        logger.LogWarning(args.Exception, "Relay processor error. Source={ErrorSource}", args.ErrorSource);
+        LogProcessorError(logger, args.Exception, args.ErrorSource);
         return Task.CompletedTask;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Relay received handled message: {Id} - {Category}")]
+    private static partial void LogReceived(ILogger logger, Guid id, string category);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Relay processor error. Source={ErrorSource}")]
+    private static partial void LogProcessorError(ILogger logger, Exception exception, ServiceBusErrorSource errorSource);
 
     [LoggerMessage(Level = LogLevel.Error,
         Message = "Dead-lettering message {MessageId} (delivery {DeliveryCount}): {Failure}")]
