@@ -6,14 +6,14 @@ namespace AspireDemo.Web.Services;
 // Subscribes to support.handled / webfrontend-sub and pushes each HandledMessage
 // into the shared SupportMessageStore. The store raises its event, which the
 // Departments Blazor page observes and uses to trigger a re-render.
-public sealed class HandledMessageRelay(
+public sealed partial class HandledMessageRelay(
     ILogger<HandledMessageRelay> logger,
     ServiceBusClient client,
     SupportMessageStore store) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var processor = client.CreateProcessor(Topics.Handled, Subscriptions.WebFrontend);
+        await using var processor = client.CreateProcessor(Topics.Handled, Subscriptions.WebFrontend);
         processor.ProcessMessageAsync += HandleMessageAsync;
         processor.ProcessErrorAsync += HandleErrorAsync;
 
@@ -26,15 +26,23 @@ public sealed class HandledMessageRelay(
         catch (OperationCanceledException) { }
         finally
         {
-            await processor.StopProcessingAsync();
-            await processor.DisposeAsync();
+            // stoppingToken is already cancelled here. The stop must not be: a cancelled
+            // stop returns early and leaves in-flight messages unsettled.
+            await processor.StopProcessingAsync(CancellationToken.None);
         }
     }
 
     private async Task HandleMessageAsync(ProcessMessageEventArgs args)
     {
-        var message = args.Message.Body.ToObjectFromJson<HandledMessage>()
-            ?? throw new InvalidOperationException("Failed to deserialise HandledMessage — body was null.");
+        // A body that will not deserialise will never deserialise: dead-letter it at
+        // once rather than let it be redelivered and fail the same way.
+        if (!MessageBody.TryRead<HandledMessage>(args.Message.Body.ToMemory(), out var message, out var failure))
+        {
+            LogPoisonMessage(logger, args.Message.MessageId, args.Message.DeliveryCount, failure);
+            await args.DeadLetterMessageAsync(
+                args.Message, MessageBody.DeadLetterReason, failure, args.CancellationToken);
+            return;
+        }
 
         store.Add(message);
 
@@ -50,4 +58,8 @@ public sealed class HandledMessageRelay(
         logger.LogWarning(args.Exception, "Relay processor error. Source={ErrorSource}", args.ErrorSource);
         return Task.CompletedTask;
     }
+
+    [LoggerMessage(Level = LogLevel.Error,
+        Message = "Dead-lettering message {MessageId} (delivery {DeliveryCount}): {Failure}")]
+    private static partial void LogPoisonMessage(ILogger logger, string messageId, int deliveryCount, string? failure);
 }

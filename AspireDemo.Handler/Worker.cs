@@ -3,11 +3,11 @@ using Azure.Messaging.ServiceBus;
 
 namespace AspireDemo.Handler;
 
-public class Worker(ILogger<Worker> logger, ServiceBusClient client) : BackgroundService
+public partial class Worker(ILogger<Worker> logger, ServiceBusClient client) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var processor = client.CreateProcessor(Topics.Classified, Subscriptions.HandlerSub);
+        await using var processor = client.CreateProcessor(Topics.Classified, Subscriptions.HandlerSub);
         await using var handledSender = client.CreateSender(Topics.Handled);
 
         processor.ProcessMessageAsync += args => HandleMessageAsync(args, handledSender);
@@ -22,15 +22,23 @@ public class Worker(ILogger<Worker> logger, ServiceBusClient client) : Backgroun
         catch (OperationCanceledException) { }
         finally
         {
-            await processor.StopProcessingAsync();
-            await processor.DisposeAsync();
+            // stoppingToken is already cancelled here. The stop must not be: a cancelled
+            // stop returns early and leaves in-flight messages unsettled.
+            await processor.StopProcessingAsync(CancellationToken.None);
         }
     }
 
     private async Task HandleMessageAsync(ProcessMessageEventArgs args, ServiceBusSender handledSender)
     {
-        var message = args.Message.Body.ToObjectFromJson<ClassifiedMessage>()
-            ?? throw new InvalidOperationException("Failed to deserialise ClassifiedMessage — body was null.");
+        // A body that will not deserialise will never deserialise: dead-letter it at
+        // once rather than let it be redelivered and fail the same way.
+        if (!MessageBody.TryRead<ClassifiedMessage>(args.Message.Body.ToMemory(), out var message, out var failure))
+        {
+            LogPoisonMessage(logger, args.Message.MessageId, args.Message.DeliveryCount, failure);
+            await args.DeadLetterMessageAsync(
+                args.Message, MessageBody.DeadLetterReason, failure, args.CancellationToken);
+            return;
+        }
 
         var response = BuildResponse(message.Category);
 
@@ -65,4 +73,8 @@ public class Worker(ILogger<Worker> logger, ServiceBusClient client) : Backgroun
         logger.LogWarning(args.Exception, "Handler processor error. Source={ErrorSource}", args.ErrorSource);
         return Task.CompletedTask;
     }
+
+    [LoggerMessage(Level = LogLevel.Error,
+        Message = "Dead-lettering message {MessageId} (delivery {DeliveryCount}): {Failure}")]
+    private static partial void LogPoisonMessage(ILogger logger, string messageId, int deliveryCount, string? failure);
 }
