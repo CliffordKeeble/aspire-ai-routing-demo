@@ -33,7 +33,8 @@ public static class ClassifierRegistration
         switch (provider)
         {
             case "keyword":
-                builder.Services.AddSingleton<IMessageClassifier>(sp => sp.GetRequiredService<KeywordClassifier>());
+                builder.Services.AddSingleton<IMessageClassifier>(sp =>
+                    new RecordingClassifier(sp.GetRequiredService<KeywordClassifier>(), provider));
                 break;
 
             case "ollama":

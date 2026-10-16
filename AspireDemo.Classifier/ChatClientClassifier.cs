@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using AspireDemo.Contracts;
 using Microsoft.Extensions.AI;
 
@@ -30,8 +29,7 @@ public sealed class ChatClientClassifier(
 
     public async Task<string> ClassifyAsync(string customerText, CancellationToken ct)
     {
-        using var activity = ClassifierTelemetry.Source.StartActivity("classify message");
-        activity?.SetTag(ClassifierTelemetry.Tags.Provider, options.Provider);
+        using var activity = ClassifierTelemetry.StartClassification(options.Provider);
 
         string reason;
         string? reply = null;
@@ -53,7 +51,7 @@ public sealed class ChatClientClassifier(
             reply = response.Text;
             if (TryMatchCategory(reply, out var category))
             {
-                Record(activity, category, fallbackReason: null);
+                ClassifierTelemetry.RecordClassification(activity, options.Provider, category, fallbackReason: null);
                 return category;
             }
 
@@ -77,7 +75,7 @@ public sealed class ChatClientClassifier(
             "Classifier fell back to keyword matching. Provider={Provider} Reason={FallbackReason} Reply={Reply} Category={Category}",
             options.Provider, reason, Truncate(reply), fallbackCategory);
 
-        Record(activity, fallbackCategory, reason);
+        ClassifierTelemetry.RecordClassification(activity, options.Provider, fallbackCategory, reason);
         return fallbackCategory;
     }
 
@@ -118,22 +116,6 @@ public sealed class ChatClientClassifier(
         Temperature = 0,
         MaxOutputTokens = 16,
     };
-
-    private void Record(Activity? activity, string category, string? fallbackReason)
-    {
-        var fellBack = fallbackReason is not null;
-
-        activity?.SetTag(ClassifierTelemetry.Tags.Category, category);
-        activity?.SetTag(ClassifierTelemetry.Tags.Fallback, fellBack);
-        if (fellBack)
-            activity?.SetTag(ClassifierTelemetry.Tags.FallbackReason, fallbackReason);
-
-        ClassifierTelemetry.Classifications.Add(
-            1,
-            new KeyValuePair<string, object?>(ClassifierTelemetry.Tags.Provider, options.Provider),
-            new KeyValuePair<string, object?>(ClassifierTelemetry.Tags.Fallback, fellBack),
-            new KeyValuePair<string, object?>(ClassifierTelemetry.Tags.FallbackReason, fallbackReason ?? "none"));
-    }
 
     private static string? Truncate(string? reply) =>
         reply is { Length: > MaxLoggedReplyLength } ? reply[..MaxLoggedReplyLength] + "…" : reply;

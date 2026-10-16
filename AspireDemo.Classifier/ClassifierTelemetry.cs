@@ -10,6 +10,8 @@ public static class ClassifierTelemetry
     // (UseOpenTelemetry is given the same name) are exported without extra wiring.
     public const string SourceName = "AspireDemo.Classifier";
 
+    public const string ClassifyActivityName = "classify message";
+
     public static readonly ActivitySource Source = new(SourceName);
     public static readonly Meter Meter = new(SourceName);
 
@@ -31,5 +33,30 @@ public static class ClassifierTelemetry
         public const string NoMatch = "no_match";
         public const string Exception = "exception";
         public const string Timeout = "timeout";
+    }
+
+    // The one recording path. Every provider starts its activity here and records
+    // its outcome here, so the tag set cannot drift between providers.
+    public static Activity? StartClassification(string provider)
+    {
+        var activity = Source.StartActivity(ClassifyActivityName);
+        activity?.SetTag(Tags.Provider, provider);
+        return activity;
+    }
+
+    public static void RecordClassification(Activity? activity, string provider, string category, string? fallbackReason)
+    {
+        var fellBack = fallbackReason is not null;
+
+        activity?.SetTag(Tags.Category, category);
+        activity?.SetTag(Tags.Fallback, fellBack);
+        if (fellBack)
+            activity?.SetTag(Tags.FallbackReason, fallbackReason);
+
+        Classifications.Add(
+            1,
+            new KeyValuePair<string, object?>(Tags.Provider, provider),
+            new KeyValuePair<string, object?>(Tags.Fallback, fellBack),
+            new KeyValuePair<string, object?>(Tags.FallbackReason, fallbackReason ?? "none"));
     }
 }
