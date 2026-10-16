@@ -120,8 +120,8 @@ all opt in.
 
 The model hop is traced rather than assumed, and the mechanism is worth stating because it is one
 line: `ServiceDefaults` registers `builder.Environment.ApplicationName` as a tracing source;
-`ClassifierTelemetry.SourceName` is that same name; and the chat client is registered with
-`.UseOpenTelemetry(sourceName: ClassifierTelemetry.SourceName)`. So the `classify message` activity
+`ClassifierTelemetry.TelemetryName` is that same name; and the chat client is registered with
+`.UseOpenTelemetry(sourceName: ClassifierTelemetry.TelemetryName)`. So the `classify message` activity
 and the model's own span both export with no further wiring. The dashboard renders Blazor click,
 Service Bus hop, model call, handler, and back to the live view.
 

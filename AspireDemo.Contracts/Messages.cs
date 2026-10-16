@@ -4,11 +4,12 @@ public record SupportMessage(Guid Id, string CustomerText, DateTimeOffset Receiv
 
 public record ClassifiedMessage(Guid Id, string CustomerText, string Category, DateTimeOffset ClassifiedAt);
 
-public record HandledMessage(Guid Id, string Category, string OriginalText, string Response, DateTimeOffset HandledAt);
+public record HandledMessage(Guid Id, string Category, string CustomerText, string Response, DateTimeOffset HandledAt);
 
-// The one declared category set. A ClassifiedMessage.Category is always one of
-// these: the classifier prompt, the reply validator and the Handler's routing
-// all read this list, so nothing downstream can see a value outside it.
+// The one declared category set. The Classifier reads the list (its prompt and its
+// check of a model's reply, so it never publishes a category outside it) and the Web
+// reads it (HandledMessageStore's buckets and the Departments page's columns). The
+// Handler does not read the list: its response switch names the constants.
 public static class Categories
 {
     public const string Billing = "Billing";

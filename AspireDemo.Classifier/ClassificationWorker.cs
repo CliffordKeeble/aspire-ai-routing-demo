@@ -1,16 +1,19 @@
 using AspireDemo.Contracts;
 using Azure.Messaging.ServiceBus;
 
-namespace AspireDemo.Handler;
+namespace AspireDemo.Classifier;
 
-public partial class Worker(ILogger<Worker> logger, ServiceBusClient client) : BackgroundService
+public partial class ClassificationWorker(
+    ILogger<ClassificationWorker> logger,
+    ServiceBusClient client,
+    IMessageClassifier classifier) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await using var processor = client.CreateProcessor(Topics.Classified, Subscriptions.HandlerSub);
-        await using var handledSender = client.CreateSender(Topics.Handled);
+        await using var processor = client.CreateProcessor(Topics.Incoming, Subscriptions.ClassifierSub);
+        await using var sender = client.CreateSender(Topics.Classified);
 
-        processor.ProcessMessageAsync += args => HandleMessageAsync(args, handledSender);
+        processor.ProcessMessageAsync += args => HandleMessageAsync(args, sender);
         processor.ProcessErrorAsync += HandleErrorAsync;
 
         await processor.StartProcessingAsync(stoppingToken);
@@ -28,11 +31,11 @@ public partial class Worker(ILogger<Worker> logger, ServiceBusClient client) : B
         }
     }
 
-    private async Task HandleMessageAsync(ProcessMessageEventArgs args, ServiceBusSender handledSender)
+    private async Task HandleMessageAsync(ProcessMessageEventArgs args, ServiceBusSender sender)
     {
         // A body that will not deserialise will never deserialise: dead-letter it at
         // once rather than let it be redelivered and fail the same way.
-        if (!MessageBody.TryRead<ClassifiedMessage>(args.Message.Body.ToMemory(), out var message, out var failure))
+        if (!MessageBody.TryRead<SupportMessage>(args.Message.Body.ToMemory(), out var message, out var failure))
         {
             LogPoisonMessage(logger, args.Message.MessageId, args.Message.DeliveryCount, failure);
             await args.DeadLetterMessageAsync(
@@ -40,37 +43,25 @@ public partial class Worker(ILogger<Worker> logger, ServiceBusClient client) : B
             return;
         }
 
-        var response = BuildResponse(message.Category);
+        var category = await classifier.ClassifyAsync(message.CustomerText, args.CancellationToken);
 
-        logger.LogInformation(
-            "Handler processed: {Id} - {Category} - {Response}",
-            message.Id, message.Category, response);
-
-        var handled = new HandledMessage(
+        var classified = new ClassifiedMessage(
             message.Id,
-            message.Category,
             message.CustomerText,
-            response,
+            category,
             DateTimeOffset.UtcNow);
 
-        await handledSender.SendMessageAsync(
-            new ServiceBusMessage(BinaryData.FromObjectAsJson(handled)),
+        await sender.SendMessageAsync(
+            new ServiceBusMessage(BinaryData.FromObjectAsJson(classified)),
             args.CancellationToken);
 
+        logger.LogInformation("Classifier classified: {Id} - {Category}", classified.Id, classified.Category);
         await args.CompleteMessageAsync(args.Message);
     }
 
-    private static string BuildResponse(string category) => category switch
-    {
-        Categories.Billing => "Thanks — we've routed your billing query to our finance team and will respond within 1 business day.",
-        Categories.Account => "We can help with account access. A reset link is on its way to your registered email.",
-        Categories.Cancellation => "We're sorry to see you go. A retention specialist will contact you shortly.",
-        _ => "Thanks for getting in touch. We'll route this to the right team and respond soon."
-    };
-
     private Task HandleErrorAsync(ProcessErrorEventArgs args)
     {
-        logger.LogWarning(args.Exception, "Handler processor error. Source={ErrorSource}", args.ErrorSource);
+        logger.LogWarning(args.Exception, "Classifier processor error. Source={ErrorSource}", args.ErrorSource);
         return Task.CompletedTask;
     }
 

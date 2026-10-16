@@ -19,7 +19,7 @@ public static class ClassifierRegistration
     // The AppHost's Ollama model resource name, and so the connection string name.
     public const string OllamaModelConnectionName = "classifier-model";
 
-    public const string OpenAIApiKeyKey = "OpenAI:ApiKey";
+    public const string OpenAIApiKeyConfigKey = "OpenAI:ApiKey";
     public const string OpenAIModelKey = "OpenAI:Model";
     public const string DefaultOpenAIModel = "gpt-4o-mini";
 
@@ -37,7 +37,7 @@ public static class ClassifierRegistration
         var timeout = TimeSpan.FromSeconds(timeoutSeconds);
 
         builder.Services.AddSingleton<KeywordClassifier>();
-        builder.Services.AddOpenTelemetry().WithMetrics(metrics => metrics.AddMeter(ClassifierTelemetry.SourceName));
+        builder.Services.AddOpenTelemetry().WithMetrics(metrics => metrics.AddMeter(ClassifierTelemetry.TelemetryName));
 
         switch (provider)
         {
@@ -52,11 +52,11 @@ public static class ClassifierRegistration
                 break;
 
             case "openai":
-                var apiKey = builder.Configuration[OpenAIApiKeyKey];
+                var apiKey = builder.Configuration[OpenAIApiKeyConfigKey];
                 if (string.IsNullOrWhiteSpace(apiKey))
                 {
                     throw new InvalidOperationException(
-                        $"{ProviderKey} is 'openai' but {OpenAIApiKeyKey} is not set. " +
+                        $"{ProviderKey} is 'openai' but {OpenAIApiKeyConfigKey} is not set. " +
                         "Set it with user secrets or the environment, never in a file in the repository.");
                 }
                 var openAIModel = builder.Configuration[OpenAIModelKey] ?? DefaultOpenAIModel;
@@ -75,7 +75,7 @@ public static class ClassifierRegistration
         IHostApplicationBuilder builder, string provider, TimeSpan timeout, IChatClient innerClient)
     {
         builder.Services.AddChatClient(innerClient)
-            .UseOpenTelemetry(sourceName: ClassifierTelemetry.SourceName);
+            .UseOpenTelemetry(sourceName: ClassifierTelemetry.TelemetryName);
 
         builder.Services.AddSingleton(new ChatClientClassifierOptions(provider, timeout));
         builder.Services.AddSingleton<IMessageClassifier, ChatClientClassifier>();

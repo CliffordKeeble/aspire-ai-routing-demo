@@ -3,7 +3,7 @@
 @implements IDisposable
 @using AspireDemo.Contracts
 @using AspireDemo.Web.Services
-@inject SupportMessageStore Store
+@inject HandledMessageStore Store
 @inject ILogger<Departments> Logger
 
 <PageTitle>Department Inbox — AI Support Routing</PageTitle>
@@ -16,7 +16,7 @@
 </p>
 
 <div class="dept-grid">
-    @foreach (var category in SupportMessageStore.Categories)
+    @foreach (var category in Categories.All)
     {
         var items = _byCategory[category];
         <div class="dept-card">
@@ -35,7 +35,7 @@
                     {
                         <li class="dept-item">
                             <div class="dept-item-id">@Shorten(msg.Id)</div>
-                            <div class="dept-item-text" title="@msg.OriginalText">@Truncate(msg.OriginalText, 60)</div>
+                            <div class="dept-item-text" title="@msg.CustomerText">@Truncate(msg.CustomerText, 60)</div>
                             <div class="dept-item-response" title="@msg.Response">@Truncate(msg.Response, 80)</div>
                             <div class="dept-item-time">@msg.HandledAt.LocalDateTime.ToString("HH:mm:ss")</div>
                         </li>
@@ -143,7 +143,7 @@
 
     private void Refresh()
     {
-        foreach (var category in SupportMessageStore.Categories)
+        foreach (var category in Categories.All)
         {
             _byCategory[category] = Store.GetForCategory(category);
         }

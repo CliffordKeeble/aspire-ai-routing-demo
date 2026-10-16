@@ -10,7 +10,7 @@ var messaging = builder.AddAzureServiceBus("messaging")
     .RunAsEmulator();
 
 // Aspire resource names must be [A-Za-z0-9-]; derive slugs from the constants.
-static string Slug(string s) => s.Replace('.', '-');
+static string Slug(string topicName) => topicName.Replace('.', '-');
 
 messaging.AddServiceBusTopic(Slug(Topics.Incoming), Topics.Incoming)
     .AddServiceBusSubscription(Subscriptions.ClassifierSub);

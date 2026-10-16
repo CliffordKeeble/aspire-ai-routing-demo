@@ -99,7 +99,7 @@ internal sealed class TelemetryProbe : IDisposable
     {
         _activityListener = new ActivityListener
         {
-            ShouldListenTo = s => s.Name == ClassifierTelemetry.SourceName,
+            ShouldListenTo = s => s.Name == ClassifierTelemetry.TelemetryName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
             ActivityStopped = a => { lock (_activities) _activities.Add(a); },
         };
@@ -107,7 +107,7 @@ internal sealed class TelemetryProbe : IDisposable
 
         _meterListener.InstrumentPublished = (instrument, listener) =>
         {
-            if (instrument.Meter.Name == ClassifierTelemetry.SourceName)
+            if (instrument.Meter.Name == ClassifierTelemetry.TelemetryName)
                 listener.EnableMeasurementEvents(instrument);
         };
         _meterListener.SetMeasurementEventCallback<long>((instrument, value, tags, _) =>

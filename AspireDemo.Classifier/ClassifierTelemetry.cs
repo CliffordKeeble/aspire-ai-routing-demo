@@ -8,12 +8,12 @@ public static class ClassifierTelemetry
     // Matches the application name, which ServiceDefaults already registers as a
     // tracing source, so the classifier's activity and the chat client's span
     // (UseOpenTelemetry is given the same name) are exported without extra wiring.
-    public const string SourceName = "AspireDemo.Classifier";
+    public const string TelemetryName = "AspireDemo.Classifier";
 
     public const string ClassifyActivityName = "classify message";
 
-    public static readonly ActivitySource Source = new(SourceName);
-    public static readonly Meter Meter = new(SourceName);
+    public static readonly ActivitySource Source = new(TelemetryName);
+    public static readonly Meter Meter = new(TelemetryName);
 
     // Every classification, tagged with whether it fell back. The fallback share
     // is the instrument that says whether this is still an AI demo.

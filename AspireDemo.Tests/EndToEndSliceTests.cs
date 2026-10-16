@@ -87,6 +87,6 @@ public class EndToEndSliceTests(ITestOutputHelper output)
         if (handled is null)
             Assert.Fail($"No HandledMessage with Id {support.Id} reached support.handled within {EndToEndTimeout.TotalSeconds:F0}s.");
         Assert.Equal(Categories.Billing, handled.Category);
-        Assert.Equal(support.CustomerText, handled.OriginalText);
+        Assert.Equal(support.CustomerText, handled.CustomerText);
     }
 }

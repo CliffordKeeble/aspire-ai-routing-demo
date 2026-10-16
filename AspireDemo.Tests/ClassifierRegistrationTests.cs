@@ -50,7 +50,7 @@ public class ClassifierRegistrationTests
     [Fact]
     public void Telemetry_source_name_is_the_classifier_applications_name()
     {
-        Assert.Equal(ClassifierTelemetry.SourceName, typeof(ClassifierTelemetry).Assembly.GetName().Name);
+        Assert.Equal(ClassifierTelemetry.TelemetryName, typeof(ClassifierTelemetry).Assembly.GetName().Name);
     }
 
     [Theory]

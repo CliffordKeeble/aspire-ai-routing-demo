@@ -4,12 +4,12 @@ using Azure.Messaging.ServiceBus;
 namespace AspireDemo.Web.Services;
 
 // Subscribes to support.handled / webfrontend-sub and pushes each HandledMessage
-// into the shared SupportMessageStore. The store raises its event, which the
+// into the shared HandledMessageStore. The store raises its event, which the
 // Departments Blazor page observes and uses to trigger a re-render.
 public sealed partial class HandledMessageRelay(
     ILogger<HandledMessageRelay> logger,
     ServiceBusClient client,
-    SupportMessageStore store) : BackgroundService
+    HandledMessageStore store) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

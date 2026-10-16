@@ -108,7 +108,7 @@ public class ChatClientClassifierTests
         var stopped = new List<Activity>();
         using var listener = new ActivityListener
         {
-            ShouldListenTo = s => s.Name == testSource.Name || s.Name == ClassifierTelemetry.SourceName,
+            ShouldListenTo = s => s.Name == testSource.Name || s.Name == ClassifierTelemetry.TelemetryName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
             ActivityStopped = a => { lock (stopped) stopped.Add(a); },
         };
@@ -124,7 +124,7 @@ public class ChatClientClassifierTests
 
         Activity classify;
         lock (stopped)
-            classify = Assert.Single(stopped, a => a.Source.Name == ClassifierTelemetry.SourceName && a.TraceId == traceId);
+            classify = Assert.Single(stopped, a => a.Source.Name == ClassifierTelemetry.TelemetryName && a.TraceId == traceId);
 
         Assert.Equal(expectFallback, classify.GetTagItem(ClassifierTelemetry.Tags.Fallback));
         Assert.Equal(expectReason, classify.GetTagItem(ClassifierTelemetry.Tags.FallbackReason));

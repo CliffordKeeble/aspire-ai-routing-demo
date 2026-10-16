@@ -90,8 +90,8 @@ public sealed partial class ChatClientClassifier(
 
         var start = 0;
         var end = span.Length;
-        while (start < end && IsSurrounding(span[start])) start++;
-        while (end > start && IsSurrounding(span[end - 1])) end--;
+        while (start < end && IsWhitespaceOrPunctuation(span[start])) start++;
+        while (end > start && IsWhitespaceOrPunctuation(span[end - 1])) end--;
 
         var candidate = span[start..end];
         foreach (var known in Categories.All)
@@ -107,7 +107,7 @@ public sealed partial class ChatClientClassifier(
         return false;
     }
 
-    private static bool IsSurrounding(char c) => char.IsWhiteSpace(c) || char.IsPunctuation(c);
+    private static bool IsWhitespaceOrPunctuation(char c) => char.IsWhiteSpace(c) || char.IsPunctuation(c);
 
     // Lowest-variance settings: greedy decoding and a reply budget sized for one
     // word. Greedy decoding still varies with batching, floating point and model

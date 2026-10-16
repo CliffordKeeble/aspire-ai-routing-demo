@@ -6,14 +6,9 @@ namespace AspireDemo.Web.Services;
 // singleton so the background relay and the Departments page share state.
 // Fires MessageAdded after each Add so subscribers (Blazor components) can
 // re-render on the UI thread via InvokeAsync(StateHasChanged).
-public sealed class SupportMessageStore
+public sealed class HandledMessageStore
 {
     public const int MaxPerCategory = 50;
-
-    // Match the handler's canned-response categories. Messages with any other
-    // category still route to "Other".
-    public static readonly IReadOnlyList<string> Categories =
-        ["Billing", "Account", "Cancellation", "Other"];
 
     private readonly object _gate = new();
     // The Ids currently held, so a redelivered message is ignored. Service Bus
@@ -21,16 +16,17 @@ public sealed class SupportMessageStore
     private readonly HashSet<Guid> _held = [];
     private readonly Dictionary<string, LinkedList<HandledMessage>> _byCategory;
 
-    public SupportMessageStore()
+    public HandledMessageStore()
     {
-        _byCategory = Categories.ToDictionary(c => c, _ => new LinkedList<HandledMessage>());
+        _byCategory = Categories.All.ToDictionary(c => c, _ => new LinkedList<HandledMessage>());
     }
 
     public event Action? MessageAdded;
 
     public void Add(HandledMessage message)
     {
-        var bucket = Categories.Contains(message.Category) ? message.Category : "Other";
+        // A message whose category is not in the declared set still shows, under Other.
+        var bucket = Categories.All.Contains(message.Category) ? message.Category : Categories.Other;
 
         lock (_gate)
         {
