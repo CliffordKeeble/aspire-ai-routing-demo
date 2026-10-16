@@ -18,8 +18,14 @@ messaging.AddServiceBusTopic(Slug(Topics.Incoming), Topics.Incoming)
 messaging.AddServiceBusTopic(Slug(Topics.Classified), Topics.Classified)
     .AddServiceBusSubscription(Subscriptions.HandlerSub);
 
-messaging.AddServiceBusTopic(Slug(Topics.Handled), Topics.Handled)
-    .AddServiceBusSubscription(Subscriptions.WebFrontend);
+var handledTopic = messaging.AddServiceBusTopic(Slug(Topics.Handled), Topics.Handled);
+handledTopic.AddServiceBusSubscription(Subscriptions.WebFrontend);
+
+// The end-to-end test reads the outcome off support.handled rather than a log line, so
+// it asks for a subscription of its own (Testing:ObserveHandled=true). Without the flag
+// the topic has only the web frontend's subscription, as it does for a person running it.
+if (bool.TryParse(builder.Configuration["Testing:ObserveHandled"], out var observeHandled) && observeHandled)
+    handledTopic.AddServiceBusSubscription(Subscriptions.TestObserver);
 
 // keyword (the default when unset), ollama or openai. The launch profiles set
 // ollama, so F5 runs a local model; the integration suite sets keyword.

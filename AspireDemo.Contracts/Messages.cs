@@ -31,4 +31,8 @@ public static class Subscriptions
     public const string ClassifierSub = "classifier-sub";
     public const string HandlerSub = "handler-sub";
     public const string WebFrontend = "webfrontend-sub";
+
+    // An observer on support.handled for the end-to-end test. The AppHost declares it
+    // only when Testing:ObserveHandled is true, so a normal run has no such subscription.
+    public const string TestObserver = "test-observer-sub";
 }

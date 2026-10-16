@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using AspireDemo.Contracts;
 using Azure.Messaging.ServiceBus;
 using Meziantou.Extensions.Logging.Xunit.v3;
@@ -9,20 +8,25 @@ namespace AspireDemo.Tests;
 
 public class EndToEndSliceTests(ITestOutputHelper output)
 {
-    private static readonly TimeSpan StartupTimeout = TimeSpan.FromMinutes(2);
+    // Five minutes, not two: on a clean machine the first run pulls the Service Bus
+    // emulator and its SQL image before anything can become healthy.
+    private static readonly TimeSpan StartupTimeout = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan EndToEndTimeout = TimeSpan.FromSeconds(60);
 
+    // Publishes straight to support.incoming, so the Web page's own publish path is not
+    // on this route (SendMessagePageTests covers it). From there the message crosses the
+    // Classifier and the Handler, and the test reads the HandledMessage off support.handled.
     [Fact]
-    public async Task Message_flows_Web_to_Classifier_to_Handler_to_Relay()
+    public async Task Message_published_to_incoming_reaches_the_handled_topic()
     {
         var ct = TestContext.Current.CancellationToken;
 
-        var capture = new CapturingLoggerProvider();
-
         // Keyword mode, set on the AppHost itself: the AppHost then declares no model
         // resource at all, so this suite never pulls an image or waits on a model.
+        // ObserveHandled asks the AppHost for a subscription of this test's own on
+        // support.handled, so the outcome is read from the topic, not from a log line.
         var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.AspireDemo_AppHost>(
-            ["Classifier:Provider=keyword"], ct);
+            ["Classifier:Provider=keyword", "Testing:ObserveHandled=true"], ct);
         Assert.DoesNotContain(appHost.Resources, r => r.Name is "ollama" or "classifier-model");
 
         appHost.Services.AddLogging(b =>
@@ -30,7 +34,6 @@ public class EndToEndSliceTests(ITestOutputHelper output)
             b.SetMinimumLevel(LogLevel.Information);
             b.AddFilter("AspireDemo.", LogLevel.Information);
             b.AddProvider(new XUnitLoggerProvider(output));
-            b.AddProvider(capture);
         });
 
         await using var app = await appHost.BuildAsync(ct).WaitAsync(StartupTimeout, ct);
@@ -53,65 +56,37 @@ public class EndToEndSliceTests(ITestOutputHelper output)
             ?? throw new InvalidOperationException("messaging connection string was null");
         await using var serviceBus = new ServiceBusClient(connectionString);
         await using var sender = serviceBus.CreateSender(Topics.Incoming);
+        await using var observer = serviceBus.CreateReceiver(Topics.Handled, Subscriptions.TestObserver);
 
         var support = new SupportMessage(Guid.NewGuid(), "my invoice is wrong", DateTimeOffset.UtcNow);
-        // Looking for the Web relay log line proves all four hops fired:
-        // Web publish -> Classifier consume+publish -> Handler consume+publish -> Web relay consume.
-        var expectedFragment = $"Relay received handled message: {support.Id} - Billing";
-
         await sender.SendMessageAsync(new ServiceBusMessage(BinaryData.FromObjectAsJson(support)), ct);
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
         deadline.CancelAfter(EndToEndTimeout);
 
-        var found = false;
-        while (!deadline.IsCancellationRequested)
+        HandledMessage? handled = null;
+        try
         {
-            if (capture.ContainsLineMatching(expectedFragment))
+            await foreach (var received in observer.ReceiveMessagesAsync(deadline.Token))
             {
-                found = true;
-                break;
-            }
-            try { await Task.Delay(250, deadline.Token); }
-            catch (OperationCanceledException) { break; }
-        }
-
-        if (!found)
-        {
-            Assert.Fail(
-                $"Did not observe relay log within {EndToEndTimeout.TotalSeconds:F0}s.\n" +
-                $"Looking for: \"{expectedFragment}\"\n" +
-                $"--- captured tail ---\n" +
-                string.Join('\n', capture.Tail(60)));
-        }
-    }
-
-    private sealed class CapturingLoggerProvider : ILoggerProvider
-    {
-        private readonly ConcurrentQueue<string> _lines = new();
-
-        public ILogger CreateLogger(string categoryName) => new CaptureLogger(categoryName, _lines);
-        public void Dispose() { }
-
-        public bool ContainsLineMatching(string fragment) =>
-            _lines.Any(l => l.Contains(fragment, StringComparison.Ordinal));
-
-        public IReadOnlyCollection<string> Tail(int n) => _lines.ToArray().TakeLast(n).ToArray();
-
-        private sealed class CaptureLogger(string category, ConcurrentQueue<string> lines) : ILogger
-        {
-            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-            public bool IsEnabled(LogLevel logLevel) => true;
-
-            public void Log<TState>(
-                LogLevel logLevel,
-                EventId eventId,
-                TState state,
-                Exception? exception,
-                Func<TState, Exception?, string> formatter)
-            {
-                lines.Enqueue($"[{category}] {formatter(state, exception)}");
+                var candidate = received.Body.ToObjectFromJson<HandledMessage>()
+                    ?? throw new InvalidOperationException("A null HandledMessage reached support.handled.");
+                await observer.CompleteMessageAsync(received, ct);
+                if (candidate.Id == support.Id)
+                {
+                    handled = candidate;
+                    break;
+                }
             }
         }
+        catch (OperationCanceledException) when (deadline.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            // Falls through to the failure below, which names what was awaited.
+        }
+
+        if (handled is null)
+            Assert.Fail($"No HandledMessage with Id {support.Id} reached support.handled within {EndToEndTimeout.TotalSeconds:F0}s.");
+        Assert.Equal(Categories.Billing, handled.Category);
+        Assert.Equal(support.CustomerText, handled.OriginalText);
     }
 }
