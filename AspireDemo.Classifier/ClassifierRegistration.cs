@@ -14,6 +14,7 @@ public static class ClassifierRegistration
 {
     public const string ProviderKey = "Classifier:Provider";
     public const string TimeoutSecondsKey = "Classifier:TimeoutSeconds";
+    public const int DefaultTimeoutSeconds = 30;
 
     // The AppHost's Ollama model resource name, and so the connection string name.
     public const string OllamaModelConnectionName = "classifier-model";
@@ -25,7 +26,15 @@ public static class ClassifierRegistration
     public static IHostApplicationBuilder AddMessageClassifier(this IHostApplicationBuilder builder)
     {
         var provider = (builder.Configuration[ProviderKey] ?? "keyword").Trim().ToLowerInvariant();
-        var timeout = TimeSpan.FromSeconds(builder.Configuration.GetValue(TimeoutSecondsKey, 30));
+        var timeoutSeconds = builder.Configuration.GetValue(TimeoutSecondsKey, DefaultTimeoutSeconds);
+        if (timeoutSeconds <= 0)
+        {
+            // Zero or less would make every model call time out at once and fall back,
+            // quietly turning an AI run into a keyword run.
+            throw new InvalidOperationException(
+                $"{TimeoutSecondsKey} must be greater than 0, but is {timeoutSeconds}.");
+        }
+        var timeout = TimeSpan.FromSeconds(timeoutSeconds);
 
         builder.Services.AddSingleton<KeywordClassifier>();
         builder.Services.AddOpenTelemetry().WithMetrics(metrics => metrics.AddMeter(ClassifierTelemetry.SourceName));

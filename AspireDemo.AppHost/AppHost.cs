@@ -34,6 +34,11 @@ var classifier = builder.AddProject<Projects.AspireDemo_Classifier>("classifier"
     .WaitFor(messaging)
     .WithEnvironment("Classifier__Provider", classifierProvider);
 
+// The timeout is forwarded as the provider is: the AppHost's configuration is where a
+// run is set, and the classifier validates it (it must be greater than 0).
+if (builder.Configuration["Classifier:TimeoutSeconds"] is { } classifierTimeoutSeconds)
+    classifier.WithEnvironment("Classifier__TimeoutSeconds", classifierTimeoutSeconds);
+
 // Model resources are declared only for the provider that needs them. In keyword
 // mode the app model has no Ollama container and no WaitFor on one, so a run
 // without a model (the integration suite, CI, a machine with no image cached)

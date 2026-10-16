@@ -83,13 +83,7 @@ public class ClassifierTelemetryTests
         Assert.Equal("no_match", count.Tags[ClassifierTelemetry.Tags.FallbackReason]);
     }
 
-    internal static IHost BuildHost(params (string Key, string Value)[] settings)
-    {
-        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
-        builder.Configuration.AddInMemoryCollection(settings.Select(s => new KeyValuePair<string, string?>(s.Key, s.Value)));
-        builder.AddMessageClassifier();
-        return builder.Build();
-    }
+    private static IHost BuildHost(params (string Key, string Value)[] settings) => ClassifierTestHost.Build(settings);
 }
 
 // Listens to the classifier's own source and meter for the life of one test.
