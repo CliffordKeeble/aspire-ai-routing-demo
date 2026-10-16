@@ -4,6 +4,7 @@
 @using AspireDemo.Contracts
 @using AspireDemo.Web.Services
 @inject SupportMessageStore Store
+@inject ILogger<Departments> Logger
 
 <PageTitle>Department Inbox — AI Support Routing</PageTitle>
 
@@ -135,25 +136,38 @@
 
     protected override void OnInitialized()
     {
-        foreach (var category in SupportMessageStore.Categories)
-        {
-            _byCategory[category] = Store.GetForCategory(category);
-        }
+        Refresh();
 
         Store.MessageAdded += OnMessageAdded;
     }
 
-    private async void OnMessageAdded()
+    private void Refresh()
     {
-        // Fired from the relay's Service Bus processor thread — must hop back
-        // to the Blazor dispatcher before touching component state or calling
-        // StateHasChanged.
         foreach (var category in SupportMessageStore.Categories)
         {
             _byCategory[category] = Store.GetForCategory(category);
         }
+    }
 
-        await InvokeAsync(StateHasChanged);
+    private async void OnMessageAdded()
+    {
+        // Fired from the relay's Service Bus processor thread, so the refresh of
+        // _byCategory and StateHasChanged both run inside InvokeAsync, on the Blazor
+        // dispatcher: the render reads _byCategory, and writing it from this thread
+        // would race that read. This is async void, so nothing may escape it: an
+        // exception here would be unobserved and could take the process down.
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                Refresh();
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            LogRefreshFailed(Logger, ex);
+        }
     }
 
     private static string Shorten(Guid id) => id.ToString("N")[..8];
